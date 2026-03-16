@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="ZARIS CRM — Gestión de Incidentes y Órdenes de Trabajo" />
+    <title>ZARIS — CRM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="crm.css" />
+</head>
+
+<body>
+
+    <!-- ══ LOGIN OVERLAY ══ -->
+    <div id="loginOverlay" class="login-overlay" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+        <div class="login-box">
+            <div class="login-logo-wrap">
+                <img src="Images/LOGO_ZARIS.gif" alt="Logo ZARIS" class="login-logo-img" />
+            </div>
+            <p class="login-subtitle">CRM — Incidentes y Órdenes de Trabajo</p>
+            <div id="panelLoginForm">
+                <form id="formLogin" class="login-form" novalidate autocomplete="on">
+                    <div class="form-group">
+                        <label class="form-label" for="login_email">Usuario (correo electrónico)</label>
+                        <input type="email" id="login_email" class="form-control" required
+                            placeholder="usuario@municipio.gob.ar" autocomplete="username" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="login_pass">Contraseña</label>
+                        <div class="pass-wrap">
+                            <input type="password" id="login_pass" class="form-control" required placeholder="••••••••"
+                                autocomplete="current-password" />
+                            <button type="button" class="btn-show-pass" id="btnShowPass" title="Mostrar contraseña"
+                                aria-label="Mostrar contraseña">👁</button>
+                        </div>
+                    </div>
+                    <div id="loginError" class="alert alert--error" role="alert" hidden></div>
+                    <button type="submit" class="btn btn--primary btn--full">Ingresar</button>
+                    <div class="login-links">
+                        <a href="home.html" class="link-btn">← Volver al inicio ZARIS</a>
+                    </div>
+                </form>
+            </div>
+            <p class="login-note">ZARIS v2.0 · Uso interno · © 2026</p>
+        </div>
+    </div>
+
+    <!-- ══ CABECERA ══ -->
+    <header class="app-header" role="banner">
+        <!-- BARRA PRIMARIA: logo | módulos | usuario -->
+        <div class="primary-nav">
+            <div class="header-brand">
+                <a href="home.html" title="Inicio ZARIS">
+                    <img src="Images/LOGO_ZARIS.gif" alt="ZARIS" class="header-logo" />
+                </a>
+                <div class="brand-text">
+                    <span class="brand-name">ZARIS</span>
+                    <span class="brand-subtitle">Gestión Estatal</span>
+                    <span class="brand-module">CRM — Incidentes</span>
+                </div>
+            </div>
+            <nav class="module-tabs" role="navigation" aria-label="Módulos ZARIS">
+                <a href="index.html" class="module-tab">👤 BUP — Personas</a>
+                <button class="module-tab module-tab--active" aria-current="page">🎧 CRM</button>
+                <a href="agenda.html" class="module-tab">📅 Agenda</a>
+            </nav>
+            <div class="header-user">
+                <div class="user-chip">
+                    <div class="user-avatar" id="userAvatar" aria-hidden="true">--</div>
+                    <div class="user-info">
+                        <span class="user-name" id="userNombre">—</span>
+                        <span class="user-rol" id="userRol">—</span>
+                    </div>
+                </div>
+                <button class="btn btn--outline btn--sm" id="btnLogout" title="Cerrar sesión">⏏ Salir</button>
+            </div>
+        </div>
+
+        <!-- SUB-NAV CRM: siempre visible dentro del módulo -->
+        <nav class="sub-nav" aria-label="Acciones CRM">
+            <button class="sub-nav-item nav-btn nav-btn--active" data-view="bandeja" id="navBandeja">📋 Bandeja</button>
+            <button class="sub-nav-item nav-btn" data-view="nuevo" id="navNuevo">✚ Nuevo Incidente</button>
+            <div class="sub-nav-sep"></div>
+            <button class="sub-nav-item nav-btn" data-view="ordenes" id="navOrdenes">🔧 Órdenes de Trabajo</button>
+            <button class="sub-nav-item nav-btn" data-view="tablero" id="navTablero">📊 Tablero</button>
+            <div class="sub-nav-sep"></div>
+            <button class="sub-nav-item nav-btn" data-view="admin" id="navAdmin">⚙️ Admin</button>
+        </nav>
+    </header>
+
+
+
+    <!-- ══ MAIN ══ -->
+    <main class="app-main" id="mainContent">
+
+        <!-- ── BANDEJA DE ENTRADA ────────────────── -->
+        <section id="viewBandeja" class="view view--active" aria-labelledby="bandejaTitle">
+            <div class="view-toolbar">
+                <h2 id="bandejaTitle" class="view-title">📋 Bandeja de Incidentes</h2>
+                <div class="view-toolbar-actions">
+                    <button class="btn btn--primary btn--sm" id="btnAbrirNuevo">✚ Nuevo incidente</button>
+                </div>
+            </div>
+            <div class="card">
+                <div class="filtros-bar">
+                    <select id="filtroEstado" class="form-control form-control--sm" style="min-width:155px">
+                        <option value="">— Todos los estados —</option>
+                        <option value="PENDIENTE">Pendiente</option>
+                        <option value="ASIGNADO">Asignado</option>
+                        <option value="EN_ESPERA_TERCEROS">En Espera Terceros</option>
+                        <option value="CUMPLIDO">Cumplido</option>
+                        <option value="CANCELADO">Cancelado</option>
+                    </select>
+                    <select id="filtroCategoria" class="form-control form-control--sm">
+                        <option value="">— Categoría —</option>
+                        <option value="RECLAMO">Reclamo</option>
+                        <option value="CONSULTA">Consulta</option>
+                    </select>
+                    <select id="filtroArea" class="form-control form-control--sm" style="min-width:160px">
+                        <option value="">— Área —</option>
+                    </select>
+                    <input type="date" id="filtroDesde" class="form-control form-control--sm" title="Fecha desde" />
+                    <input type="date" id="filtroHasta" class="form-control form-control--sm" title="Fecha hasta" />
+                    <input type="text" id="filtroBuscar" class="form-control form-control--sm"
+                        placeholder="🔍 Buscar ref / ciudadano…" style="min-width:180px" />
+                    <button class="btn btn--outline btn--sm" id="btnLimpiarFiltros">✕ Limpiar</button>
+                    <button class="btn btn--outline btn--sm" id="btnExportarBandeja">⬇ XLS</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="tablaBandeja">
+                        <thead>
+                            <tr>
+                                <th>Referencia</th>
+                                <th>Ciudadano</th>
+                                <th>Tipo / Área</th>
+                                <th>Cat.</th>
+                                <th>Estado</th>
+                                <th>SLA</th>
+                                <th>Canal</th>
+                                <th>Fecha</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaBandejaBody"></tbody>
+                    </table>
+                    <div id="bandejaVacio" class="empty-msg" hidden>
+                        <span class="empty-icon">📋</span>
+                        <p>No hay incidentes con los filtros aplicados.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── NUEVO INCIDENTE ─────── -->
+        <section id="viewNuevo" class="view" hidden aria-labelledby="nuevoTitle">
+            <div class="view-toolbar">
+                <h2 id="nuevoTitle" class="view-title">✚ Nuevo Incidente</h2>
+            </div>
+            <div class="card">
+                <div id="nuevoContainer"></div>
+            </div>
+        </section>
+
+        <!-- ── ÓRDENES DE TRABAJO ─────────────────── -->
+        <section id="viewOrdenes" class="view" hidden aria-labelledby="ordenesTitle">
+            <div class="view-toolbar">
+                <h2 id="ordenesTitle" class="view-title">🔧 Órdenes de Trabajo</h2>
+            </div>
+            <div class="card">
+                <div class="filtros-bar">
+                    <select id="otFiltroEstado" class="form-control form-control--sm">
+                        <option value="">— Todos los estados —</option>
+                        <option value="EN_PROCESO">En Proceso</option>
+                        <option value="COMPLETADA">Completada</option>
+                        <option value="CANCELADA">Cancelada</option>
+                    </select>
+                    <select id="otFiltroAreaGestion" class="form-control form-control--sm" style="min-width:150px">
+                        <option value="">— Área de Gestión —</option>
+                    </select>
+                    <select id="otFiltroSubarea" class="form-control form-control--sm" style="min-width:150px">
+                        <option value="">— Sub-área —</option>
+                    </select>
+                    <select id="otFiltroTecnico" class="form-control form-control--sm" style="min-width:150px">
+                        <option value="">— Técnico —</option>
+                    </select>
+                    <input type="date" id="otFiltroDesde" class="form-control form-control--sm" title="Fecha desde" />
+                    <input type="date" id="otFiltroHasta" class="form-control form-control--sm" title="Fecha hasta" />
+                    <input type="text" id="otFiltroBuscar" class="form-control form-control--sm"
+                        placeholder="🔍 OT# / Incidente…" style="min-width:150px" />
+                    <button class="btn btn--outline btn--sm" id="btnLimpiarFiltrosOT">✕ Limpiar</button>
+                    <button class="btn btn--outline btn--sm" id="btnExportarOT">⬇ XLS</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="tablaOrdenes">
+                        <thead>
+                            <tr>
+                                <th>OT #</th>
+                                <th>Incidente</th>
+                                <th>Ciudadano</th>
+                                <th>Área / Sub-área</th>
+                                <th>Técnico</th>
+                                <th>Instrucciones</th>
+                                <th>Estado</th>
+                                <th>Fecha</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaOrdenesBody"></tbody>
+                    </table>
+                    <div id="ordenesVacio" class="empty-msg" hidden>
+                        <span class="empty-icon">🔧</span>
+                        <p>No hay órdenes de trabajo con los filtros aplicados.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── TABLERO ────────────────────────────── -->
+        <section id="viewTablero" class="view" hidden aria-labelledby="tableroTitle">
+            <div class="view-toolbar">
+                <h2 id="tableroTitle" class="view-title">📊 Tablero de Control</h2>
+                <div class="view-toolbar-actions">
+                    <button class="btn btn--outline btn--sm" id="btnRefreshTablero">↻ Actualizar</button>
+                </div>
+            </div>
+            <div id="kpiContainer" class="kpi-grid"></div>
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Incidentes por Área y Estado</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="tablaTablero">
+                        <thead>
+                            <tr>
+                                <th>Área</th>
+                                <th>Estado</th>
+                                <th>Categoría</th>
+                                <th>Total</th>
+                                <th>SLA Vencidos</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaTableroBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── ADMIN MAESTROS ─────────────────────── -->
+        <section id="viewAdmin" class="view" hidden aria-labelledby="adminTitle">
+            <div class="view-toolbar">
+                <h2 id="adminTitle" class="view-title">⚙️ Administración de Maestros</h2>
+            </div>
+            <div class="subtabs-bar" role="tablist">
+                <button class="subtab subtab--active" data-admin="areas" role="tab">🏢 Áreas</button>
+                <button class="subtab" data-admin="tipos" role="tab">🏷 Tipos</button>
+                <button class="subtab" data-admin="canales" role="tab">📡 Canales</button>
+                <button class="subtab" data-admin="areasGestion" role="tab">🔧 Áreas Gestión</button>
+                <button class="subtab" data-admin="subareasGestion" role="tab">🔩 Sub-áreas Gestión</button>
+                <button class="subtab" data-admin="tecnicos" role="tab">👷 Técnicos</button>
+                <button class="subtab" data-admin="estados" role="tab">🚦 Estados</button>
+            </div>
+
+            <!-- Áreas clasificación -->
+            <div id="adminAreas" class="card" style="display:block">
+                <div class="card-header">
+                    <h3 class="card-title">Áreas y Sub-áreas (Clasificación de Incidentes)</h3>
+                    <div class="card-header-actions">
+                        <button class="btn btn--primary btn--sm" id="btnNuevaArea">+ Nueva área</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="tablaAreas">
+                        <thead>
+                            <tr>
+                                <th>Área</th>
+                                <th>Palabras clave</th>
+                                <th>Sub-áreas</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaAreasBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tipos de incidente -->
+            <div id="adminTipos" class="card" hidden>
+                <div class="card-header">
+                    <h3 class="card-title">Tipos de Incidente</h3>
+                    <div class="card-header-actions">
+                        <button class="btn btn--primary btn--sm" id="btnNuevoTipo">+ Nuevo tipo</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="tablaTipos">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Área / Sub-área</th>
+                                <th>Categoría</th>
+                                <th>SLA (hs)</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaTiposBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Canales -->
+            <div id="adminCanales" class="card" hidden>
+                <div class="card-header">
+                    <h3 class="card-title">Canales de Origen</h3>
+                    <div class="card-header-actions">
+                        <button class="btn btn--primary btn--sm" id="btnNuevoCanal">+ Nuevo canal</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="tablaCanales">
+                        <thead>
+                            <tr>
+                                <th>Canal</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaCanalesBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Áreas de Gestión -->
+            <div id="adminAreasGestion" class="card" hidden>
+                <div class="card-header">
+                    <h3 class="card-title">Áreas de Gestión Operativa</h3>
+                    <div class="card-header-actions">
+                        <button class="btn btn--primary btn--sm" id="btnNuevaAreaGestion">+ Nueva área gestión</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="tablaAreasGestion">
+                        <thead>
+                            <tr>
+                                <th>Área de Gestión</th>
+                                <th>Descripción</th>
+                                <th>Sub-áreas</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaAreasGestionBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Sub-áreas de Gestión -->
+            <div id="adminSubareasGestion" class="card" hidden>
+                <div class="card-header">
+                    <h3 class="card-title">Sub-áreas de Gestión Operativa</h3>
+                    <div class="card-header-actions">
+                        <button class="btn btn--primary btn--sm" id="btnNuevaSubareaGestion">+ Nueva sub-área</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="tablaSubareasGestion">
+                        <thead>
+                            <tr>
+                                <th>Sub-área</th>
+                                <th>Área de Gestión</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaSubareasGestionBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Técnicos -->
+            <div id="adminTecnicos" class="card" hidden>
+                <div class="card-header">
+                    <h3 class="card-title">Técnicos y Agentes de Gestión</h3>
+                    <div class="card-header-actions">
+                        <button class="btn btn--primary btn--sm" id="btnNuevoTecnico">+ Nuevo técnico</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="tablaTecnicos">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Email</th>
+                                <th>Perfil</th>
+                                <th>Sub-área Gestión</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaTecnicosBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Estados de Incidente -->
+            <div id="adminEstados" class="card" hidden>
+                <div class="card-header">
+                    <h3 class="card-title">Estados de Incidente</h3>
+                    <p class="form-hint" style="margin:.25rem 1.25rem .5rem">Los estados con Terminal=Sí son sellos
+                        definitivos.</p>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="tablaEstados">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Etiqueta</th>
+                                <th>Terminal</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaEstadosBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ══ MODAL: DETALLE DE INCIDENTE ══ -->
+    <div id="modalDetalle" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+        <div class="modal-box modal-box--lg">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title" id="detalleRef">INC-2026-000001</h2>
+                    <small id="detalleTipo" style="color:var(--text2)"></small>
+                </div>
+                <button type="button" class="modal-close" id="btnCerrarDetalle" aria-label="Cerrar">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="display:flex;align-items:center;gap:.65rem;flex-wrap:wrap">
+                    <span id="detalleEstadoChip"></span>
+                    <span id="detalleSlaChip"></span>
+                    <span id="detalleCategBadge"></span>
+                    <div style="margin-left:auto;display:flex;gap:.45rem;flex-wrap:wrap">
+                        <button class="btn btn--outline btn--sm" id="btnCambiarEstado">↔ Cambiar estado</button>
+                        <button class="btn btn--primary btn--sm" id="btnCrearOT">🔧 Crear OT</button>
+                        <button class="btn btn--outline btn--sm" id="btnCrearCita">📅 Asignar Turno</button>
+                        <button class="btn btn--outline btn--sm" id="btnCrearHijo">🔗 Crear hijo</button>
+                        <button class="btn btn--outline btn--sm" id="btnAgregarNota">✎ Nota</button>
+                    </div>
+                </div>
+                <div class="detail-grid" id="detalleGrid"></div>
+                <div>
+                    <div class="detail-label">Descripción</div>
+                    <div class="detail-value" id="detalleDesc"
+                        style="background:var(--bg3);padding:.65rem .85rem;border-radius:var(--radius-sm);border:1px solid var(--border)">
+                    </div>
+                </div>
+                <div id="detallePadreHijo" hidden></div>
+                <div id="detalleOTs">
+                    <div class="detail-label" style="margin-bottom:.5rem">Órdenes de Trabajo</div>
+                    <table class="data-table" id="tablaDetalleOTs">
+                        <thead>
+                            <tr>
+                                <th>OT #</th>
+                                <th>Sub-área Gestión</th>
+                                <th>Técnico</th>
+                                <th>Estado</th>
+                                <th>Instrucciones</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaDetalleOTsBody"></tbody>
+                    </table>
+                </div>
+                <div>
+                    <div class="detail-label" style="margin-bottom:.5rem">Historia del ticket</div>
+                    <div class="timeline" id="timelineContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ MODAL: CAMBIAR ESTADO ══ -->
+    <div id="modalCambiarEstado" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+        <div class="modal-box modal-box--sm">
+            <div class="modal-header">
+                <h2 class="modal-title">↔ Cambiar Estado</h2>
+                <button type="button" class="modal-close" id="btnCerrarCambioEstadoX">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="nuevoEstadoSel">Nuevo estado <span class="req">*</span></label>
+                    <select id="nuevoEstadoSel" class="form-control">
+                        <option value="PENDIENTE">1 · Pendiente</option>
+                        <option value="ASIGNADO">2 · Asignado</option>
+                        <option value="CUMPLIDO">3 · Cumplido ⚠ Terminal</option>
+                        <option value="CANCELADO">4 · Cancelado ⚠ Terminal</option>
+                        <option value="EN_ESPERA_TERCEROS">5 · En Espera de Terceros</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="motivoCambioEstado">Observación / Motivo <span
+                            class="req">*</span></label>
+                    <textarea id="motivoCambioEstado" class="form-control" rows="3" required
+                        placeholder="Descripción del cambio de estado…"></textarea>
+                </div>
+                <div id="alertaTerminal" class="alert alert--error" hidden>⚠ Estado TERMINAL. El incidente quedará
+                    sellado definitivamente.</div>
+                <div id="alertaHijoPendiente" class="alert alert--error" hidden>🔗 Tiene incidente(s) hijo sin resolver.
+                    No puede cerrarse.</div>
+                <div id="cambioEstadoError" class="alert alert--error" hidden></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnCancelarCambioEstado" class="btn btn--outline">Cancelar</button>
+                <button type="button" id="btnConfirmarCambioEstado" class="btn btn--primary">✓ Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ MODAL: CREAR OT (ampliado con área+técnico) ══ -->
+    <div id="modalNuevaOT" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+        <div class="modal-box modal-box--sm">
+            <div class="modal-header">
+                <h2 class="modal-title">🔧 Nueva Orden de Trabajo</h2>
+                <button type="button" class="modal-close" id="btnCerrarNuevaOTX">✕</button>
+            </div>
+            <div class="modal-body">
+                <p class="form-hint" id="otIncidenteInfo" style="margin-bottom:.75rem;font-weight:600"></p>
+                <div class="form-group">
+                    <label class="form-label" for="otAreaGestion">Área de Gestión <span class="req">*</span></label>
+                    <select id="otAreaGestion" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="otSubAreaGestion">Sub-área de Gestión <span
+                            class="req">*</span></label>
+                    <select id="otSubAreaGestion" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="otTecnico">Técnico asignado <span class="req">*</span></label>
+                    <select id="otTecnico" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="otDescripcion">Instrucciones para el técnico</label>
+                    <textarea id="otDescripcion" class="form-control" rows="3"
+                        placeholder="Instrucciones detalladas para el equipo de gestión…"></textarea>
+                </div>
+                <div class="alert alert--info" style="font-size:.82rem">Estado inicial de la OT: <strong>EN
+                        PROCESO</strong> (automático)</div>
+                <div id="otError" class="alert alert--error" hidden></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnCancelarNuevaOT" class="btn btn--outline">Cancelar</button>
+                <button type="button" id="btnConfirmarNuevaOT" class="btn btn--primary">🔧 Crear OT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ MODAL: CANCELAR OT ══ -->
+    <div id="modalCancelarOT" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+        <div class="modal-box modal-box--sm">
+            <div class="modal-header">
+                <h2 class="modal-title">✕ Cancelar Orden de Trabajo</h2>
+                <button type="button" class="modal-close" id="btnCerrarCancelarOTX">✕</button>
+            </div>
+            <div class="modal-body">
+                <p class="form-hint" id="cancelarOTInfo" style="margin-bottom:.75rem"></p>
+                <div class="alert alert--warning" style="margin-bottom:.75rem">
+                    ⚠ Al cancelar la OT, el incidente volverá a estado <strong>Pendiente</strong>.
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="motivoCancelarOT">Motivo de cancelación <span
+                            class="req">*</span></label>
+                    <textarea id="motivoCancelarOT" class="form-control" rows="3" required
+                        placeholder="Ingrese el motivo obligatorio…"></textarea>
+                </div>
+                <div id="cancelarOTError" class="alert alert--error" hidden></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnCerrarCancelarOT" class="btn btn--outline">Volver</button>
+                <button type="button" id="btnConfirmarCancelarOT" class="btn btn--danger">✕ Cancelar OT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ MODAL: NUEVA CITA AGENDA ══ -->
+    <div id="modalNuevaCita" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+        <div class="modal-box modal-box--md">
+            <div class="modal-header">
+                <h2 class="modal-title">📅 Reservar Turno en Agenda</h2>
+                <button type="button" class="modal-close" id="btnCerrarNuevaCitaX">✕</button>
+            </div>
+            <div class="modal-body">
+                <p class="form-hint" id="citaIncidenteInfo" style="margin-bottom:.75rem;font-weight:600"></p>
+                <div class="form-group">
+                    <label class="form-label">Centro Principal <span class="req">*</span></label>
+                    <select id="citaCentro" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Consultorio / Sub-espacio <span class="req">*</span></label>
+                    <select id="citaConsultorio" class="form-control" required>
+                        <option value="">Seleccione centro primero...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Fecha del Turno <span class="req">*</span></label>
+                    <input type="date" id="citaFecha" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Horario Disponible (Agente) <span class="req">*</span></label>
+                    <select id="citaHorario" class="form-control" required>
+                        <option value="">Seleccione fecha y consultorio...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Motivo (Notas para el médico)</label>
+                    <textarea id="citaNotas" class="form-control" rows="2"></textarea>
+                </div>
+                <div id="citaError" class="alert alert--error" hidden></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnCancelarNuevaCita" class="btn btn--outline">Cancelar</button>
+                <button type="button" id="btnConfirmarNuevaCita" class="btn btn--primary">📅 Confirmar Turno</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ MODAL: AGREGAR NOTA ══ -->
+    <div id="modalNota" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+        <div class="modal-box modal-box--sm">
+            <div class="modal-header">
+                <h2 class="modal-title">✎ Agregar Nota</h2>
+                <button type="button" class="modal-close" id="btnCerrarNotaX">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="textoNota">Nota <span class="req">*</span></label>
+                    <textarea id="textoNota" class="form-control" rows="4" required
+                        placeholder="Ingrese la observación o nota interna…"></textarea>
+                </div>
+                <div id="notaError" class="alert alert--error" hidden></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnCancelarNota" class="btn btn--outline">Cancelar</button>
+                <button type="button" id="btnGuardarNota" class="btn btn--primary">💾 Guardar nota</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ MODAL: ÁREA (clasificación) ══ -->
+    <div id="modalArea" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+        <div class="modal-box modal-box--sm">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalAreaTitle">Nueva Área</h2>
+                <button type="button" class="modal-close" id="btnCerrarAreaX">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="areaNombre">Nombre <span class="req">*</span></label>
+                    <input type="text" id="areaNombre" class="form-control" required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="areaDesc">Descripción</label>
+                    <input type="text" id="areaDesc" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="areaClave">Palabras clave (separadas por coma)</label>
+                    <input type="text" id="areaClave" class="form-control" placeholder="lámpara,farol,luminaria" />
+                </div>
+                <div id="areaError" class="alert alert--error" hidden></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnCancelarArea" class="btn btn--outline">Cancelar</button>
+                <button type="button" id="btnGuardarArea" class="btn btn--primary">💾 Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ MODAL: TIPO DE INCIDENTE ══ -->
+    <div id="modalTipo" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+        <div class="modal-box modal-box--sm">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTipoTitle">Nuevo Tipo de Incidente</h2>
+                <button type="button" class="modal-close" id="btnCerrarTipoX">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="tipoNombre">Nombre <span class="req">*</span></label>
+                    <input type="text" id="tipoNombre" class="form-control" required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="tipoArea">Área <span class="req">*</span></label>
+                    <select id="tipoArea" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="tipoSubArea">Sub-área <span class="req">*</span></label>
+                    <select id="tipoSubArea" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="tipoCategoria">Categoría <span class="req">*</span></label>
+                    <select id="tipoCategoria" class="form-control">
+                        <option value="RECLAMO">RECLAMO (genera OT, tiene SLA)</option>
+                        <option value="CONSULTA">CONSULTA (informativo, sin OT)</option>
+                    </select>
+                </div>
+                <div class="form-group" id="tipoSlaGroup">
+                    <label class="form-label" for="tipoSla">SLA (horas)</label>
+                    <input type="number" id="tipoSla" class="form-control" value="48" min="0" />
+                </div>
+                <div id="tipoError" class="alert alert--error" hidden></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnCancelarTipo" class="btn btn--outline">Cancelar</button>
+                <button type="button" id="btnGuardarTipo" class="btn btn--primary">💾 Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ MODAL: ÁREA DE GESTIÓN ══ -->
+    <div id="modalAreaGestion" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+        <div class="modal-box modal-box--sm">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalAreaGestionTitle">Nueva Área de Gestión</h2>
+                <button type="button" class="modal-close" id="btnCerrarAreaGestionX">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="areaGestionNombre">Nombre <span class="req">*</span></label>
+                    <input type="text" id="areaGestionNombre" class="form-control" required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="areaGestionDesc">Descripción</label>
+                    <input type="text" id="areaGestionDesc" class="form-control" />
+                </div>
+                <div id="areaGestionError" class="alert alert--error" hidden></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnCancelarAreaGestion" class="btn btn--outline">Cancelar</button>
+                <button type="button" id="btnGuardarAreaGestion" class="btn btn--primary">💾 Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ MODAL: SUB-ÁREA DE GESTIÓN ══ -->
+    <div id="modalSubareaGestion" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+        <div class="modal-box modal-box--sm">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalSubareaGestionTitle">Nueva Sub-área de Gestión</h2>
+                <button type="button" class="modal-close" id="btnCerrarSubareaGestionX">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="subareaGestionArea">Área de Gestión <span
+                            class="req">*</span></label>
+                    <select id="subareaGestionArea" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="subareaGestionNombre">Nombre <span class="req">*</span></label>
+                    <input type="text" id="subareaGestionNombre" class="form-control" required />
+                </div>
+                <div id="subareaGestionError" class="alert alert--error" hidden></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnCancelarSubareaGestion" class="btn btn--outline">Cancelar</button>
+                <button type="button" id="btnGuardarSubareaGestion" class="btn btn--primary">💾 Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ MODAL: TÉCNICO ══ -->
+    <div id="modalTecnico" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+        <div class="modal-box modal-box--sm">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTecnicoTitle">Nuevo Técnico</h2>
+                <button type="button" class="modal-close" id="btnCerrarTecnicoX">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:.65rem">
+                    <div class="form-group">
+                        <label class="form-label" for="tecNombre">Nombre <span class="req">*</span></label>
+                        <input type="text" id="tecNombre" class="form-control" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="tecApellido">Apellido <span class="req">*</span></label>
+                        <input type="text" id="tecApellido" class="form-control" required />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="tecEmail">Email</label>
+                    <input type="email" id="tecEmail" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="tecPerfil">Perfil <span class="req">*</span></label>
+                    <select id="tecPerfil" class="form-control">
+                        <option value="GESTION">GESTION (técnico operativo)</option>
+                        <option value="ADMINISTRACION">ADMINISTRACION (coordinador)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="tecSubarea">Sub-área de Gestión</label>
+                    <select id="tecSubarea" class="form-control"></select>
+                </div>
+                <div id="tecnicoError" class="alert alert--error" hidden></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnCancelarTecnico" class="btn btn--outline">Cancelar</button>
+                <button type="button" id="btnGuardarTecnico" class="btn btn--primary">💾 Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ MODAL: EDITAR LABEL ESTADO ══ -->
+    <div id="modalEstado" class="modal-overlay" role="dialog" aria-modal="true" hidden>
+        <div class="modal-box modal-box--sm">
+            <div class="modal-header">
+                <h2 class="modal-title">🚦 Editar Estado de Incidente</h2>
+                <button type="button" class="modal-close" id="btnCerrarEstadoX">✕</button>
+            </div>
+            <div class="modal-body">
+                <p class="form-hint" id="estadoCodigoInfo" style="margin-bottom:.5rem"></p>
+                <div class="form-group">
+                    <label class="form-label" for="estadoLabel">Etiqueta visible <span class="req">*</span></label>
+                    <input type="text" id="estadoLabel" class="form-control" required />
+                </div>
+                <div id="estadoError" class="alert alert--error" hidden></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btnCancelarEstado" class="btn btn--outline">Cancelar</button>
+                <button type="button" id="btnGuardarEstado" class="btn btn--primary">💾 Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toasts -->
+    <div id="toastContainer" class="toast-container" role="status" aria-live="polite"></div>
+
+    <!-- SheetJS para export XLS -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="crm.js"></script>
+</body>
+
+</html>

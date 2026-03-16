@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZARIS — Mantenimiento de Agenda</title>
+    <!-- Mismos estilos base compartidos de la suite ZARIS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="mantenimiento.css">
+</head>
+<body class="theme-light">
+
+    <!-- HEADER ZARIS -->
+    <header class="header">
+        <div class="header-brand">
+            <span class="logo-icon">💠</span>
+            <div class="brand-text">
+                <span class="brand-name">ZARIS</span>
+                <span class="brand-module">ADMINISTRACIÓN AGENDA</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <a href="index.html" class="btn btn--ghost btn--sm">Inicio</a>
+            <a href="agenda.html" class="btn btn--ghost btn--sm">Ver Agenda</a>
+            <div class="user-chip">
+                <div class="user-avatar" id="userAvatar">AD</div>
+                <div class="user-info">
+                    <span class="user-name" id="userNombre">Admin</span>
+                    <span class="user-rol rol--administrador" id="userRol">ADMINISTRADOR</span>
+                </div>
+            </div>
+            <button class="btn btn--ghost btn--icon" id="btnLogout" title="Cerrar Sessión">🚪</button>
+        </div>
+    </header>
+
+    <div class="layout" id="mainLayout" hidden>
+        <!-- NAV LATERAL -->
+        <nav class="sidebar">
+            <ul class="nav-list" role="tablist">
+                <li><button class="nav-btn nav-btn--active" data-view="espacios" role="tab" aria-selected="true" aria-controls="viewEspacios">🏢 Espacios Físicos</button></li>
+                <li><button class="nav-btn" data-view="eventos" role="tab" aria-selected="false" aria-controls="viewEventos">🎟 Eventos Especiales</button></li>
+                <li><button class="nav-btn" data-view="equipos" role="tab" aria-selected="false" aria-controls="viewEquipos">👥 Equipos y Agentes</button></li>
+                <li><a href="index.html" class="nav-btn" style="text-decoration:none">👤 Base Única de Personas</a></li>
+            </ul>
+        </nav>
+
+        <main class="content">
+
+            <!-- 1. GESTIÓN ESPACIOS (Centros, Campos y Consultorios) -->
+            <section id="viewEspacios" class="view view--active" role="tabpanel" aria-labelledby="tab_espacios">
+                <div class="view-header">
+                    <div class="view-title">
+                        <h2>Gestión de Espacios</h2>
+                        <p>Creación de Centros Principales y Sub-espacios (Campos o Consultorios).</p>
+                    </div>
+                </div>
+
+                <div class="padron-layout">
+                    <!-- Lista de Espacios Padres (Centros) -->
+                    <div class="padron-list-card">
+                        <div class="card-header">
+                            <h3>Centros Principales</h3>
+                            <button class="btn btn--sm btn--primary" id="btnNuevoCentro">+ Centro</button>
+                        </div>
+                        <ul class="item-list" id="listaCentros">
+                            <!-- JS inyecta -->
+                        </ul>
+                    </div>
+
+                    <!-- Detalle del Centro seleccionado (Sub-espacios) -->
+                    <div class="padron-detail-card">
+                        <div class="card-header">
+                            <h3 id="tituloSubespacios">Sub-espacios</h3>
+                            <button class="btn btn--sm btn--primary" id="btnNuevoSub" disabled>+ Sub-espacio</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table" id="tablaSubespacios">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Tipo</th>
+                                        <th>Horario (min)</th>
+                                        <th>Capacidad</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bodySubespacios">
+                                    <tr><td colspan="6" class="text-center text-muted">Seleccione un centro principal...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. GESTIÓN DE EVENTOS -->
+            <section id="viewEventos" class="view" role="tabpanel" aria-labelledby="tab_eventos" hidden>
+                <div class="view-header flex-between">
+                    <div class="view-title">
+                        <h2>Eventos Especiales</h2>
+                        <p>Eventos con reserva de Entradas QR y control de aforo.</p>
+                    </div>
+                    <button class="btn btn--primary" id="btnNuevoEvento">+ Nuevo Evento</button>
+                </div>
+                <!-- TODO: JS renderizado de tabla multi-día -->
+                <div class="empty-state">🚧 En desarrollo (Vista Administrador)</div>
+            </section>
+
+            <!-- 3. AGENDA Y AGENTES -->
+            <section id="viewEquipos" class="view" role="tabpanel" aria-labelledby="tab_equipos" hidden>
+                <div class="view-header">
+                    <div class="view-title">
+                        <h2>Asignación de Agentes y Horarios</h2>
+                        <p>Vincular Médicos/Agentes a los Consultorios disponibles.</p>
+                    </div>
+                </div>
+                
+                <div class="padron-layout">
+                    <!-- Configurator -->
+                    <div class="padron-list-card" style="flex: 1.2;">
+                        <div class="card-header">
+                            <h3>Nueva Vinculación</h3>
+                        </div>
+                        <form id="formAgenteEspacio" style="padding: 1.5rem;">
+                            <div class="form-group">
+                                <label class="form-label">Agente (Profesional)</label>
+                                <select class="form-control" id="f_ag_usuario" required>
+                                    <option value="">Cargando agentes...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Consultorio / Sub-espacio</label>
+                                <select class="form-control" id="f_ag_espacio" required>
+                                    <option value="">Seleccione consultorio...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Duración de su Turno (min) <span class="req">*</span></label>
+                                <input type="number" class="form-control" id="f_ag_duracion" min="5" step="5" value="15" required title="Cuántos minutos dura por defecto 1 turno con este Agente aquí">
+                            </div>
+
+                            <hr style="margin: 1.5rem 0; border:none; border-top:1px solid var(--border-color);">
+                            <h4 style="margin-bottom:1rem; font-size: 0.95rem; font-weight:600;">Días y Horarios Laborales</h4>
+                            
+                            <div id="agenteHorariosList" style="display:flex; flex-direction:column; gap:0.75rem;">
+                                <!-- Llenado por JS -->
+                            </div>
+
+                            <div style="margin-top: 2rem; text-align: right;">
+                                <button type="submit" class="btn btn--primary" style="width:100%">Guardar Asignación</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Lista de asignaciones existentes -->
+                    <div class="padron-detail-card" style="flex: 2;">
+                        <div class="card-header flex-between">
+                            <h3>Asignaciones Vigentes</h3>
+                            <button class="btn btn--ghost btn--sm btn--icon" id="btnRefreshAgentes" title="Refrescar">🔄</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table" id="tablaAgentesEspacios">
+                                <thead>
+                                    <tr>
+                                        <th>Agente</th>
+                                        <th>Consultorio</th>
+                                        <th style="width: 140px;">Cronograma</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bodyAgentesEspacios">
+                                    <tr><td colspan="3" class="text-center text-muted">Aún no se consultaron.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <div id="noAccessMsg" class="access-denied" hidden>
+        <h2>⛔ Acceso Restringido</h2>
+        <p>Solo los Administradores de la Plataforma pueden acceder al menú de Mantenimiento.</p>
+        <br>
+        <a href="agenda.html" class="btn btn--primary">Volver a Agenda</a>
+    </div>
+
+    <!-- MODAL ABM ESPACIO (Padre o Hijo) -->
+    <div class="modal-overlay" id="modalEspacio" hidden>
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalEspacioTitle">Nuevo Espacio</h3>
+                <button class="btn btn--icon" id="btnCerrarSecModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="formEspacio">
+                    <input type="hidden" id="f_esp_id">
+                    <input type="hidden" id="f_esp_padre_id"> <!-- Si tiene, es sub-espacio -->
+
+                    <div class="form-row">
+                        <div class="form-group" style="flex:2">
+                            <label class="form-label">Nombre del Espacio <span class="req">*</span></label>
+                            <input type="text" class="form-control" id="f_esp_nombre" required>
+                        </div>
+                        <div class="form-group" style="flex:1">
+                            <label class="form-label">Tipo <span class="req">*</span></label>
+                            <select class="form-control" id="f_esp_tipo" required>
+                                <option value="PADRE" id="optPadre">Centro Principal (Padre)</option>
+                                <option value="ATENDIDO" id="optAtendido">Consultorio (Atendido por Agente)</option>
+                                <option value="DESATENDIDO" id="optDesatendido">Campo/Cancha (Desatendido)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Descripción Operativa</label>
+                        <textarea class="form-control" id="f_esp_desc" rows="2"></textarea>
+                    </div>
+
+                    <!-- Config específica de dependientes -->
+                    <div class="form-row" id="cf_subespacio">
+                        <div class="form-group">
+                            <label class="form-label">Duración x Turno (min) <span class="req">*</span></label>
+                            <input type="number" class="form-control" id="f_esp_duracion" min="5" step="5" value="30">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Capacidad Simultánea <span class="req">*</span></label>
+                            <input type="number" class="form-control" id="f_esp_cap" min="1" value="1" title="Cuántas personas por cada slot de turno">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Estado</label>
+                            <select class="form-control" id="f_esp_activo">
+                                <option value="true">Activo / Operable</option>
+                                <option value="false">Inactivo / Fuera de Servicio</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn--ghost" id="btnCancelEspacio">Cancelar</button>
+                        <button type="submit" class="btn btn--primary">Guardar Espacio</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Scripts Compartidos -->
+    <script src="app.js"></script>
+    <script src="mantenimiento.js"></script>
+</body>
+</html>

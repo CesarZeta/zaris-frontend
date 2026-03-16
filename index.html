@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="ZARIS — Base Única de Personas. Gestión centralizada de personas." />
+    <title>ZARIS — BUP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+    <!-- ══════════════════════════════════════════════════════
+     LOGIN OVERLAY
+══════════════════════════════════════════════════════ -->
+    <div id="loginOverlay" class="login-overlay" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+        <div class="login-box">
+            <div class="login-logo-wrap">
+                <img src="Images/LOGO_ZARIS.gif" alt="Logo ZARIS" class="login-logo-img" />
+            </div>
+            <p class="login-subtitle">Base Única de Personas</p>
+
+            <!-- PANEL: Inicio de sesión -->
+            <div id="panelLoginForm">
+                <form id="formLogin" class="login-form" novalidate autocomplete="on">
+                    <div class="form-group">
+                        <label class="form-label" for="login_email">Usuario (correo electrónico)</label>
+                        <input type="email" id="login_email" class="form-control" required
+                            placeholder="usuario@ejemplo.com" autocomplete="username" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="login_pass">Contraseña</label>
+                        <div class="pass-wrap">
+                            <input type="password" id="login_pass" class="form-control" required placeholder="••••••••"
+                                autocomplete="current-password" />
+                            <button type="button" class="btn-show-pass" id="btnShowPass" title="Mostrar contraseña"
+                                aria-label="Mostrar contraseña">👁</button>
+                        </div>
+                    </div>
+                    <div id="loginError" class="alert alert--error" role="alert" hidden></div>
+                    <button type="submit" id="btnLogin" class="btn btn--primary btn--full">Ingresar</button>
+                    <div class="login-links">
+                        <button type="button" class="link-btn" id="btnIrRecuperar">¿Olvidaste tu contraseña?</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- PANEL: Recuperar contraseña -->
+            <div id="panelRecuperar" hidden>
+                <p class="recover-desc">Ingresá tu correo electrónico y te enviaremos instrucciones para recuperar el
+                    acceso.</p>
+                <form id="formRecuperar" class="login-form" novalidate>
+                    <div class="form-group">
+                        <label class="form-label" for="rec_email">Correo electrónico registrado</label>
+                        <input type="email" id="rec_email" class="form-control" required
+                            placeholder="usuario@ejemplo.com" />
+                    </div>
+                    <div id="recError" class="alert alert--error" role="alert" hidden></div>
+                    <div id="recSuccess" class="alert alert--success" role="status" hidden></div>
+                    <button type="submit" class="btn btn--primary btn--full">Enviar instrucciones</button>
+                    <div class="login-links">
+                        <button type="button" class="link-btn" id="btnVolver">← Volver al inicio de sesión</button>
+                    </div>
+                </form>
+            </div>
+
+            <p class="login-note">ZARIS v2.0 · Uso interno · © 2026</p>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+     CABECERA
+══════════════════════════════════════════════════════ -->
+    <!-- BARRA PRIMARIA: logo | módulos | usuario -->
+    <header class="app-header" role="banner">
+        <div class="primary-nav">
+            <div class="header-brand">
+                <a href="home.html" title="Inicio ZARIS">
+                    <img src="Images/LOGO_ZARIS.gif" alt="ZARIS" class="header-logo" />
+                </a>
+                <div class="brand-text">
+                    <span class="brand-name">ZARIS</span>
+                    <span class="brand-subtitle">Gestión Estatal</span>
+                    <span class="brand-module">BUP — Personas</span>
+                </div>
+            </div>
+            <nav class="module-tabs" role="navigation" aria-label="Módulos ZARIS">
+                <button class="module-tab module-tab--active" aria-current="page">👤 BUP — Personas</button>
+                <a href="crm.html" class="module-tab">🎧 CRM</a>
+                <a href="agenda.html" class="module-tab">📅 Agenda</a>
+            </nav>
+            <div class="header-user">
+                <div class="user-chip">
+                    <div class="user-avatar" id="userAvatar" aria-hidden="true">--</div>
+                    <div class="user-info">
+                        <span class="user-name" id="userNombre">—</span>
+                        <span class="user-rol" id="userRol">—</span>
+                    </div>
+                </div>
+                <button class="btn btn--outline btn--sm" id="btnLogout" title="Cerrar sesión">⏏ Salir</button>
+            </div>
+        </div>
+
+        <!-- SUB-NAV BUP: siempre visible dentro del módulo -->
+        <nav class="sub-nav" aria-label="Acciones BUP">
+            <button class="sub-nav-item nav-btn nav-btn--active" data-view="abm" id="navAbm">👤 Personas</button>
+            <button class="sub-nav-item nav-btn" data-view="consulta" id="navConsulta">📋 Consulta</button>
+            <div class="sub-nav-sep"></div>
+            <button class="sub-nav-item nav-btn" data-view="padrones" id="navPadrones">⚙️ Padrones</button>
+            <button class="sub-nav-item nav-btn" data-view="audit" id="navAudit">🕘 Auditoría</button>
+            <div class="sub-nav-sep"></div>
+            <button class="sub-nav-item nav-btn" data-view="help" id="navHelp">❓ Ayuda</button>
+        </nav>
+    </header>
+
+
+    <!-- ══════════════════════════════════════════════════════
+     MAIN
+══════════════════════════════════════════════════════ -->
+    <main class="app-main" id="mainContent">
+
+        <!-- ─── ABM ────────────────────────────────────────── -->
+        <section id="viewAbm" class="view view--active" aria-labelledby="abmHeading">
+
+            <div class="card card--search" id="panelBusqueda">
+                <div class="card-header">
+                    <div class="step-badge"><span class="step-number">1</span><span class="step-label">Búsqueda</span>
+                    </div>
+                    <h1 class="card-title" id="abmHeading">Búsqueda de Persona</h1>
+                    <p class="card-description">Ingrese Tipo de Documento, Número y Sexo para localizar o dar de alta un
+                        registro.</p>
+                </div>
+                <form id="formBusqueda" class="search-form" novalidate>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="busq_tipo_doc">Tipo de Documento <span
+                                    class="req">*</span></label>
+                            <select id="busq_tipo_doc" class="form-control" required>
+                                <option value="DNI" selected>DNI</option>
+                                <option value="LC">LC — Libreta Cívica</option>
+                                <option value="LE">LE — Libreta de Enrolamiento</option>
+                                <option value="PASAPORTE">Pasaporte</option>
+                                <option value="CI">CI — Cédula de Identidad</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="busq_nro_doc">N.º de Documento <span
+                                    class="req">*</span></label>
+                            <input type="number" id="busq_nro_doc" class="form-control" required
+                                placeholder="ej: 28456789" min="1000000" max="99999999" />
+                            <span class="form-hint">Entre 7 y 8 dígitos</span>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="busq_sexo">Sexo Registral <span class="req">*</span></label>
+                            <select id="busq_sexo" class="form-control" required>
+                                <option value="">— Seleccione —</option>
+                                <option value="M">M — Masculino</option>
+                                <option value="F">F — Femenino</option>
+                                <option value="X">X — No binario</option>
+                            </select>
+                        </div>
+                        <div class="form-group form-group--action">
+                            <button type="submit" id="btnBuscar" class="btn btn--primary">🔍 Buscar</button>
+                        </div>
+                    </div>
+                    <div id="busquedaError" class="alert alert--error" role="alert" hidden></div>
+                </form>
+            </div>
+
+            <div id="panelFormulario" class="card card--form" hidden>
+                <div class="card-header">
+                    <div id="modeBadge" class="mode-badge"></div>
+                    <h2 class="card-title" id="formModeTitle">Formulario</h2>
+                    <p class="card-description" id="formModeDesc"></p>
+                </div>
+
+                <div id="bannerSoloLectura" class="alert alert--info" role="status" hidden>
+                    🔒 Modo <strong>solo lectura</strong> — perfil CONSULTA.
+                </div>
+                <div id="alertaContacto" class="alert alert--error" style="margin:0 2rem .75rem" role="alert" hidden>
+                    ⚠ Ingrese al menos un teléfono, email o dirección.
+                </div>
+
+                <form id="formPersona" class="persona-form" novalidate>
+
+                    <fieldset class="form-fieldset">
+                        <legend class="fieldset-legend">🪪 Identificación</legend>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="f_tipo_doc">Tipo Doc. <span class="req">*</span></label>
+                                <select id="f_tipo_doc" class="form-control" required>
+                                    <option value="DNI">DNI</option>
+                                    <option value="LC">LC</option>
+                                    <option value="LE">LE</option>
+                                    <option value="PASAPORTE">Pasaporte</option>
+                                    <option value="CI">CI</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="f_nro_doc">N.º Documento <span
+                                        class="req">*</span></label>
+                                <input type="number" id="f_nro_doc" class="form-control" required readonly />
+                                <span class="form-hint">Clave — no modificable</span>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="f_sexo">Sexo Registral <span class="req">*</span></label>
+                                <select id="f_sexo" class="form-control" required>
+                                    <option value="M">Masculino</option>
+                                    <option value="F">Femenino</option>
+                                    <option value="X">No binario</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="f_cuil">CUIL / CUIT</label>
+                                <input type="text" id="f_cuil" class="form-control mono" maxlength="13"
+                                    placeholder="20-12345678-9" />
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="form-fieldset">
+                        <legend class="fieldset-legend">👤 Datos Personales</legend>
+                        <div class="form-row">
+                            <div class="form-group form-group--lg">
+                                <label class="form-label" for="f_apellido">Apellido/s <span class="req">*</span></label>
+                                <input type="text" id="f_apellido" class="form-control" required maxlength="150"
+                                    placeholder="Ej: García López" />
+                                <span class="form-error" id="err_apellido" role="alert"></span>
+                            </div>
+                            <div class="form-group form-group--lg">
+                                <label class="form-label" for="f_nombre">Nombre/s <span class="req">*</span></label>
+                                <input type="text" id="f_nombre" class="form-control" required maxlength="150"
+                                    placeholder="Ej: Juan Carlos" />
+                                <span class="form-error" id="err_nombre" role="alert"></span>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="f_fecha_nac">Fecha de Nacimiento</label>
+                                <input type="date" id="f_fecha_nac" class="form-control" min="1900-01-01" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="f_estado_civil">Estado Civil</label>
+                                <select id="f_estado_civil" class="form-control">
+                                    <option value="">— Seleccione —</option>
+                                    <option value="SOL">Soltero/a</option>
+                                    <option value="CAS">Casado/a</option>
+                                    <option value="DIV">Divorciado/a</option>
+                                    <option value="VIU">Viudo/a</option>
+                                    <option value="UCO">Unión convivencial</option>
+                                    <option value="SEP">Separado/a</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="f_nivel_estudio">Nivel de Estudios</label>
+                                <select id="f_nivel_estudio" class="form-control">
+                                    <option value="">— Seleccione —</option>
+                                    <option value="SIN">Sin instrucción</option>
+                                    <option value="PRC">Primario completo</option>
+                                    <option value="SCC">Secundario completo</option>
+                                    <option value="UNC">Universitario completo</option>
+                                    <option value="POS">Posgrado</option>
+                                </select>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="form-fieldset">
+                        <legend class="fieldset-legend">🏥 Salud y Emergencias</legend>
+                        <div class="form-row">
+                            <div class="form-group form-group--lg">
+                                <label class="form-label" for="f_obra_social">Obra Social / Prepaga</label>
+                                <input type="text" id="f_obra_social" class="form-control" maxlength="150"
+                                    placeholder="Ej: OSDE, IOMA..." />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="f_nro_afiliado">N.º Afiliado</label>
+                                <input type="text" id="f_nro_afiliado" class="form-control" maxlength="50"
+                                    placeholder="12345678" />
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group form-group--lg">
+                                <label class="form-label" for="f_contacto_emergencia">Contacto de Emergencia</label>
+                                <input type="text" id="f_contacto_emergencia" class="form-control" maxlength="200"
+                                    placeholder="Nombre y Celular (Ej: Madre - 11 5555 4444)" />
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="form-fieldset">
+                        <legend class="fieldset-legend">📱 Contacto <span class="legend-badge">Mínimo 1</span></legend>
+                        <div class="form-row">
+                            <div class="form-group form-group--lg">
+                                <label class="form-label" for="f_email">✉ Correo Electrónico</label>
+                                <input type="email" id="f_email" class="form-control" maxlength="254"
+                                    placeholder="usuario@dominio.com" />
+                                <span class="form-error" id="err_email" role="alert"></span>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="f_acepta_mails">Acepta comunicaciones</label>
+                                <select id="f_acepta_mails" class="form-control">
+                                    <option value="true">Sí</option>
+                                    <option value="false">No</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="subsection-header">
+                            <h3 class="subsection-title">Teléfonos</h3>
+                            <button type="button" id="btnAddTel" class="btn btn--outline btn--sm">+ Agregar
+                                teléfono</button>
+                        </div>
+                        <div id="telefonosContainer" class="items-container" role="list"></div>
+                        <div class="subsection-header">
+                            <h3 class="subsection-title">Dirección</h3>
+                            <button type="button" id="btnAddDir" class="btn btn--outline btn--sm">+ Agregar
+                                dirección</button>
+                        </div>
+                        <div id="direccionesContainer" class="items-container" role="list"></div>
+                    </fieldset>
+
+                    <details class="form-collapsible">
+                        <summary class="collapsible-header">🔗 Datos Filiatorios <span
+                                class="collapsible-arrow">▼</span></summary>
+                        <fieldset class="form-fieldset form-fieldset--flat">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="f_parentesco">Parentesco</label>
+                                    <select id="f_parentesco" class="form-control">
+                                        <option value="">— Sin parentesco —</option>
+                                        <option value="PAD">Padre</option>
+                                        <option value="MAD">Madre</option>
+                                        <option value="HIJ">Hijo/a</option>
+                                        <option value="CON">Cónyuge</option>
+                                        <option value="HER">Hermano/a</option>
+                                        <option value="TUT">Tutor/a</option>
+                                        <option value="OTR">Otro</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" id="secParienteRef" hidden>
+                                    <label class="form-label" for="f_par_nro">DNI del Pariente</label>
+                                    <input type="number" id="f_par_nro" class="form-control" placeholder="N.º documento"
+                                        min="1000000" max="99999999" />
+                                </div>
+                            </div>
+                        </fieldset>
+                    </details>
+
+                    <div class="form-actions">
+                        <button type="button" id="btnCancelar" class="btn btn--outline">← Cancelar</button>
+                        <div class="actions-right">
+                            <button type="button" id="btnBajaLogica" class="btn btn--danger" hidden>🗃 Dar de
+                                baja</button>
+                            <button type="submit" id="btnGuardar" class="btn btn--primary" hidden>💾 Guardar</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- ─── CONSULTA ───────────────────────────────────── -->
+        <section id="viewConsulta" class="view" aria-labelledby="consultaHeading" hidden>
+            <div class="card">
+                <div class="card-header">
+                    <h1 class="card-title" id="consultaHeading">Consulta — Personas</h1>
+                    <div class="card-header-actions">
+                        <button type="button" id="btnExportarCSV" class="btn btn--outline btn--sm" hidden>📥 Exportar
+                            CSV</button>
+                    </div>
+                </div>
+                <div class="filters-panel" role="search">
+                    <div class="filters-grid">
+                        <div class="filter-group">
+                            <label class="form-label" for="flt_apellido_desde">Apellido desde</label>
+                            <input type="text" id="flt_apellido_desde" class="form-control form-control--sm"
+                                maxlength="50" placeholder="A" />
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label" for="flt_apellido_hasta">hasta</label>
+                            <input type="text" id="flt_apellido_hasta" class="form-control form-control--sm"
+                                maxlength="50" placeholder="Z" />
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label" for="flt_fecha_desde">Alta desde</label>
+                            <input type="date" id="flt_fecha_desde" class="form-control form-control--sm" />
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label" for="flt_fecha_hasta">hasta</label>
+                            <input type="date" id="flt_fecha_hasta" class="form-control form-control--sm" />
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label" for="flt_sexo">Sexo</label>
+                            <select id="flt_sexo" class="form-control form-control--sm">
+                                <option value="">Todos</option>
+                                <option value="M">Masculino</option>
+                                <option value="F">Femenino</option>
+                                <option value="X">No binario</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="form-label" for="flt_activo">Estado</label>
+                            <select id="flt_activo" class="form-control form-control--sm">
+                                <option value="">Todos</option>
+                                <option value="true" selected>Solo activos</option>
+                                <option value="false">Solo dados de baja</option>
+                            </select>
+                        </div>
+                        <div class="filter-group filter-group--search">
+                            <label class="form-label" for="flt_texto">Búsqueda libre</label>
+                            <input type="search" id="flt_texto" class="form-control form-control--sm"
+                                placeholder="Nombre, DNI, email…" />
+                        </div>
+                        <div class="filter-actions">
+                            <button type="button" id="btnFiltrar" class="btn btn--primary btn--sm">🔍 Filtrar</button>
+                            <button type="button" id="btnLimpiarFiltros" class="btn btn--outline btn--sm">↺
+                                Limpiar</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-wrapper" role="region" aria-live="polite">
+                    <table class="data-table" id="tablaPersonas">
+                        <thead>
+                            <tr>
+                                <th data-sort="nro_documento">DNI ⇅</th>
+                                <th data-sort="apellido">Apellido y Nombre ⇅</th>
+                                <th>Sexo</th>
+                                <th data-sort="fecha_nacimiento">F. Nac ⇅</th>
+                                <th>Contacto</th>
+                                <th>Estado</th>
+                                <th data-sort="created_at">Alta ⇅</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaPersonasBody"></tbody>
+                    </table>
+                    <div id="tablaVacia" class="empty-state" hidden>
+                        <span style="font-size:2rem">🔍</span>
+                        <p>No se encontraron registros.</p>
+                    </div>
+                </div>
+                <div class="table-footer">
+                    <span id="tablaConteo" class="table-count"></span>
+                    <div id="paginacion" class="pagination"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── PADRONES ─────────────────────────────────────── -->
+        <section id="viewPadrones" class="view" aria-labelledby="padronesHeading" hidden>
+            <div class="card">
+                <div class="card-header">
+                    <h1 class="card-title" id="padronesHeading">⚙️ Administración de Padrones</h1>
+                    <p class="card-description">Gestión de tablas maestras: países, provincias, localidades y combos.
+                    </p>
+                </div>
+                <div class="subtabs" role="tablist">
+                    <button class="subtab subtab--active" role="tab" aria-selected="true" data-padron="paises">🌍
+                        Países</button>
+                    <button class="subtab" role="tab" aria-selected="false" data-padron="provincias">🗺
+                        Provincias</button>
+                    <button class="subtab" role="tab" aria-selected="false" data-padron="localidades">🏙
+                        Localidades</button>
+                    <button class="subtab" role="tab" aria-selected="false" data-padron="combos">🔖 Combos</button>
+                </div>
+                <div class="padron-toolbar">
+                    <input type="search" id="padronBusqueda" class="form-control form-control--sm" placeholder="Buscar…"
+                        style="max-width:240px" />
+                    <button type="button" id="btnPadronNuevo" class="btn btn--primary btn--sm">+ Nuevo</button>
+                    <label class="btn btn--outline btn--sm" title="Importar CSV">
+                        📂 Importar CSV
+                        <input type="file" id="importCSVInput" accept=".csv,.txt" hidden />
+                    </label>
+                </div>
+                <div class="table-wrapper" role="region" aria-live="polite">
+                    <table class="data-table" id="tablaPadron">
+                        <thead id="tablaPadronHead"></thead>
+                        <tbody id="tablaPadronBody"></tbody>
+                    </table>
+                    <div id="padronVacio" class="empty-state" hidden><span style="font-size:2rem">📂</span>
+                        <p>Sin registros.</p>
+                    </div>
+                </div>
+                <div class="table-footer">
+                    <span id="padronConteo" class="table-count"></span>
+                    <div id="padronPaginacion" class="pagination"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── AUDITORÍA ──────────────────────────────────── -->
+        <section id="viewAudit" class="view" aria-labelledby="auditHeading" hidden>
+            <div class="card">
+                <div class="card-header">
+                    <h1 class="card-title" id="auditHeading">Historial de Operaciones</h1>
+                    <p class="card-description">Registro de auditoría de esta sesión.</p>
+                </div>
+                <div id="auditLog" class="audit-log" role="log"></div>
+            </div>
+        </section>
+
+        <!-- ─── AYUDA ──────────────────────────────────────── -->
+        <section id="viewHelp" class="view" aria-labelledby="helpHeading" hidden>
+            <div class="card">
+                <div class="card-header">
+                    <h1 class="card-title" id="helpHeading">Guía de Uso — ZARIS</h1>
+                </div>
+                <div class="help-content">
+                    <div class="help-section">
+                        <h2>📌 ¿Qué es ZARIS?</h2>
+                        <p><strong>ZARIS</strong> es el repositorio centralizado de la <strong>Base Única de
+                                Personas</strong>. Distintos módulos (CRM, Incidentes, Órdenes de Trabajo) consultan
+                            esta base sin duplicar datos.</p>
+                    </div>
+                    <div class="help-section">
+                        <h2>👥 Perfiles de Acceso</h2>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Acción</th>
+                                    <th>CONSULTA</th>
+                                    <th>COLABORADOR</th>
+                                    <th>ADMINISTRADOR</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Ver / Buscar</td>
+                                    <td>✅</td>
+                                    <td>✅</td>
+                                    <td>✅</td>
+                                </tr>
+                                <tr>
+                                    <td>Exportar CSV</td>
+                                    <td>❌</td>
+                                    <td>✅</td>
+                                    <td>✅</td>
+                                </tr>
+                                <tr>
+                                    <td>Alta / Modificar</td>
+                                    <td>❌</td>
+                                    <td>✅</td>
+                                    <td>✅</td>
+                                </tr>
+                                <tr>
+                                    <td>Baja lógica</td>
+                                    <td>❌</td>
+                                    <td>❌</td>
+                                    <td>✅</td>
+                                </tr>
+                                <tr>
+                                    <td>Admin padrones</td>
+                                    <td>❌</td>
+                                    <td>❌</td>
+                                    <td>✅</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="help-section">
+                        <h2>🔐 Acceso al sistema</h2>
+                        <p>Ingrese con su <strong>correo electrónico</strong> y <strong>contraseña</strong>. El perfil
+                            de acceso lo asigna el administrador al crear su cuenta. Si olvidó su contraseña use el
+                            enlace <em>"¿Olvidaste tu contraseña?"</em> en la pantalla de login.</p>
+                        <p><strong>Usuario administrador genérico:</strong><br />
+                            Email: <code>admin@zaris.local</code><br />
+                            Contraseña: <code>Admin2026!</code></p>
+                    </div>
+                    <div class="help-section">
+                        <h2>📞 Normalización de Teléfonos</h2>
+                        <p>Al ingresar un número, el campo muestra automáticamente el formato normalizado (ej:
+                            <em>1164882709</em> → <strong>📱 011 15-6488-2709</strong>).
+                        </p>
+                    </div>
+                    <div class="help-section">
+                        <h2>📍 Geocodificación de Direcciones</h2>
+                        <p>El botón 🗺 en cada dirección consulta OpenStreetMap para normalizar la calle y obtener
+                            coordenadas automáticamente.</p>
+                    </div>
+                    <div class="help-section">
+                        <h2>🗃 Bajas Lógicas</h2>
+                        <p>El botón <strong>"Dar de baja"</strong> (solo ADMINISTRADOR) nunca elimina el registro, solo
+                            lo marca como inactivo con fecha y motivo.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ══════════════════════════════════════════════════════
+     MODAL — Baja lógica
+══════════════════════════════════════════════════════ -->
+    <div id="modalBaja" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalBajaTitle" hidden>
+        <div class="modal-box">
+            <div class="modal-icon">⚠</div>
+            <h2 class="modal-title" id="modalBajaTitle">Confirmar Baja Lógica</h2>
+            <p class="modal-desc">El registro quedará <strong>inactivo</strong>. Los datos <strong>no se
+                    eliminan</strong>.</p>
+            <div class="form-group" style="margin-bottom:1.5rem">
+                <label class="form-label" for="motivoBaja">Motivo <span class="req">*</span></label>
+                <textarea id="motivoBaja" class="form-control" rows="3" placeholder="Describa el motivo…"
+                    required></textarea>
+                <span class="form-error" id="err_motivo_baja" role="alert"></span>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="btnCancelarBaja" class="btn btn--outline">Cancelar</button>
+                <button type="button" id="btnConfirmarBaja" class="btn btn--danger">Confirmar baja</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+     MODAL — ABM Padrón
+══════════════════════════════════════════════════════ -->
+    <div id="modalPadron" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalPadronTitle"
+        hidden>
+        <div class="modal-box modal-box--wide">
+            <h2 class="modal-title" id="modalPadronTitle">—</h2>
+            <form id="formPadron" novalidate>
+                <div id="formPadronCampos"></div>
+                <div id="padronError" class="alert alert--error" hidden></div>
+                <div class="modal-actions">
+                    <button type="button" id="btnCancelarPadron" class="btn btn--outline">Cancelar</button>
+                    <button type="submit" id="btnGuardarPadron" class="btn btn--primary">💾 Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+     MODAL — Import CSV
+══════════════════════════════════════════════════════ -->
+    <div id="modalImportCSV" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalImportTitle"
+        hidden>
+        <div class="modal-box modal-box--wide">
+            <h2 class="modal-title" id="modalImportTitle">📂 Importar CSV</h2>
+            <p class="modal-desc" id="modalImportDesc"></p>
+            <div id="importPreview" class="import-preview"></div>
+            <div id="importError" class="alert alert--error" hidden></div>
+            <div class="modal-actions">
+                <button type="button" id="btnCancelarImport" class="btn btn--outline">Cancelar</button>
+                <button type="button" id="btnConfirmarImport" class="btn btn--primary">✅ Importar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+     TOAST
+══════════════════════════════════════════════════════ -->
+    <div id="toastContainer" class="toast-container" role="status" aria-live="polite"></div>
+
+    <!-- ══════════════════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════════════════ -->
+    <footer class="app-footer" role="contentinfo">
+        <span>ZARIS v2.0</span>
+        <span class="footer-sep">·</span>
+        <span>Base Única de Personas</span>
+        <span class="footer-sep">·</span>
+        <span>© 2026 Uso interno</span>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

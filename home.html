@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="ZARIS — Gestión Estatal. Portal de acceso a módulos." />
+    <title>ZARIS — Gestión Estatal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+        /* ══ HOME — estilos específicos de esta página ══ */
+        .home-content {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 1.5rem 1.75rem 3rem;
+            width: 100%;
+        }
+
+        .home-welcome {
+            margin-bottom: 1.75rem;
+        }
+
+        .home-welcome h1 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--text);
+            margin-bottom: .2rem;
+        }
+
+        .home-welcome p {
+            font-size: .84rem;
+            color: var(--text2);
+        }
+
+        .hub-section {
+            margin-bottom: 1.75rem;
+        }
+
+        .hub-section-title {
+            font-size: .68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            color: var(--text3);
+            margin-bottom: .85rem;
+            padding-bottom: .4rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .hub-row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        /* Tarjetas de módulo */
+        .module-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.1rem 1.25rem;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            gap: .3rem;
+            min-width: 200px;
+            flex: 1;
+            position: relative;
+            transition: box-shadow .18s, border-color .18s, transform .18s;
+        }
+
+        .module-card:hover {
+            border-color: var(--accent);
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .module-icon {
+            font-size: 1.5rem;
+        }
+
+        .module-name {
+            font-size: .92rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .module-desc {
+            font-size: .78rem;
+            color: var(--text2);
+            line-height: 1.45;
+        }
+
+        .module-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .3rem;
+            font-size: .63rem;
+            font-weight: 700;
+            padding: .18rem .5rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            margin-top: .25rem;
+            align-self: flex-start;
+        }
+
+        .badge--live {
+            background: var(--success-bg);
+            color: var(--success);
+        }
+
+        /* Tarjetas transaccionales (compactas) */
+        .tx-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: .85rem 1.1rem;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            min-width: 165px;
+            flex: 1;
+            transition: box-shadow .15s, border-color .15s, background .15s;
+        }
+
+        .tx-card:hover {
+            border-color: var(--accent);
+            background: var(--bg3);
+        }
+
+        .tx-icon {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .tx-label {
+            font-size: .84rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .tx-sub {
+            font-size: .72rem;
+            color: var(--text3);
+        }
+
+        .home-footer {
+            text-align: center;
+            padding: 1.25rem;
+            font-size: .72rem;
+            color: var(--text3);
+            border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ══════════════════════════════════════════
+     LOGIN OVERLAY
+══════════════════════════════════════════ -->
+    <div id="loginOverlay" class="login-overlay" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+        <div class="login-box">
+            <div class="login-logo-wrap">
+                <img src="Images/LOGO_ZARIS.gif" alt="Logo ZARIS" class="login-logo-img" />
+            </div>
+            <p class="login-subtitle">ZARIS — Gestión Estatal</p>
+
+            <!-- Panel: Inicio de sesión -->
+            <div id="panelLoginForm">
+                <form id="formLogin" class="login-form" novalidate autocomplete="on">
+                    <div class="form-group">
+                        <label class="form-label" for="login_email">Usuario (correo electrónico)</label>
+                        <input type="email" id="login_email" class="form-control" required
+                            placeholder="usuario@organismo.gob.ar" autocomplete="username" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="login_pass">Contraseña</label>
+                        <div class="pass-wrap">
+                            <input type="password" id="login_pass" class="form-control" required placeholder="••••••••"
+                                autocomplete="current-password" />
+                            <button type="button" class="btn-show-pass" id="btnShowPass"
+                                aria-label="Mostrar contraseña">👁</button>
+                        </div>
+                    </div>
+                    <div id="loginError" class="alert alert--error" role="alert" hidden></div>
+                    <button type="submit" id="btnLogin" class="btn btn--primary btn--full">Ingresar</button>
+                    <div class="login-links">
+                        <button type="button" class="link-btn" id="btnIrRecuperar">¿Olvidaste tu contraseña?</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Panel: Recuperar contraseña -->
+            <div id="panelRecuperar" hidden>
+                <p class="recover-desc">Ingresá tu correo electrónico y te enviaremos instrucciones para recuperar el
+                    acceso.</p>
+                <form id="formRecuperar" class="login-form" novalidate>
+                    <div class="form-group">
+                        <label class="form-label" for="rec_email">Correo electrónico registrado</label>
+                        <input type="email" id="rec_email" class="form-control" required
+                            placeholder="usuario@organismo.gob.ar" />
+                    </div>
+                    <div id="recError" class="alert alert--error" role="alert" hidden></div>
+                    <div id="recSuccess" class="alert alert--success" role="status" hidden></div>
+                    <button type="submit" class="btn btn--primary btn--full">Enviar instrucciones</button>
+                    <div class="login-links">
+                        <button type="button" class="link-btn" id="btnVolver">← Volver al inicio de sesión</button>
+                    </div>
+                </form>
+            </div>
+
+            <p class="login-note">ZARIS v2.0 · Uso interno · © 2026</p>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+     CABECERA + MEGA-NAV
+══════════════════════════════════════════ -->
+    <header class="app-header" role="banner">
+
+        <!-- BARRA PRIMARIA: logo | módulos | usuario -->
+        <div class="primary-nav">
+
+            <div class="header-brand">
+                <a href="home.html" aria-label="Inicio ZARIS">
+                    <img src="Images/LOGO_ZARIS.gif" alt="ZARIS" class="header-logo" />
+                </a>
+                <div class="brand-text">
+                    <span class="brand-name">ZARIS</span>
+                    <span class="brand-subtitle">Gestión Estatal</span>
+                </div>
+            </div>
+
+            <!-- MODULE TABS -->
+            <nav class="module-tabs" role="navigation" aria-label="Módulos ZARIS">
+                <button class="module-tab" data-module="bup" aria-expanded="false" id="tabBup">
+                    👤 BUP — Personas <span class="tab-chevron">▾</span>
+                </button>
+                <button class="module-tab" data-module="crm" aria-expanded="false" id="tabCrm">
+                    🎧 CRM <span class="tab-chevron">▾</span>
+                </button>
+                <button class="module-tab" data-module="agenda" aria-expanded="false" id="tabAgenda">
+                    📅 Agenda <span class="tab-chevron">▾</span>
+                </button>
+            </nav>
+
+            <!-- USUARIO + LOGOUT -->
+            <div class="header-user">
+                <div class="user-chip">
+                    <div class="user-avatar" id="userAvatar" aria-hidden="true">--</div>
+                    <div class="user-info">
+                        <span class="user-name" id="userNombre">—</span>
+                        <span class="user-rol" id="userRol">—</span>
+                    </div>
+                </div>
+                <button class="btn btn--outline btn--sm" id="btnLogout" title="Cerrar sesión">⏏ Salir</button>
+            </div>
+        </div>
+
+        <!-- BARRA SECUNDARIA: se despliega al hacer clic en un módulo -->
+        <nav class="sub-nav" id="subNav" hidden aria-label="Acciones del módulo"></nav>
+
+    </header>
+
+    <!-- ══════════════════════════════════════════
+     CONTENIDO PRINCIPAL
+══════════════════════════════════════════ -->
+    <main class="home-content">
+
+        <div class="home-welcome">
+            <h1>Bienvenido a ZARIS</h1>
+            <p>Seleccioná un módulo en la barra superior o usá los accesos directos de abajo</p>
+        </div>
+
+        <!-- FILA 1: MÓDULOS PRINCIPALES -->
+        <div class="hub-section">
+            <div class="hub-section-title">🧩 Módulos del Sistema</div>
+            <div class="hub-row">
+                <a href="index.html" class="module-card">
+                    <span class="module-icon">👤</span>
+                    <div class="module-name">BUP — Base Única de Personas</div>
+                    <div class="module-desc">Alta, modificación, consulta y padrones centralizados de personas.</div>
+                    <span class="module-badge badge--live">● Disponible</span>
+                </a>
+                <a href="crm.html" class="module-card">
+                    <span class="module-icon">🎧</span>
+                    <div class="module-name">CRM — Incidentes</div>
+                    <div class="module-desc">Reclamos, consultas, órdenes de trabajo, SLA y clasificación automática.
+                    </div>
+                    <span class="module-badge badge--live">● Disponible</span>
+                </a>
+                <a href="agenda.html" class="module-card">
+                    <span class="module-icon">📅</span>
+                    <div class="module-name">Agenda</div>
+                    <div class="module-desc">Turnos, eventos con entradas QR, lista de espera y gestión de espacios.
+                    </div>
+                    <span class="module-badge badge--live">● Disponible</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- FILA 2: ACCESO TRANSACCIONAL -->
+        <div class="hub-section">
+            <div class="hub-section-title">⚡ Acceso Transaccional</div>
+            <div class="hub-row">
+                <a href="crm.html" class="tx-card">
+                    <span class="tx-icon">📋</span>
+                    <div>
+                        <div class="tx-label">Bandeja de Incidentes</div>
+                        <div class="tx-sub">CRM</div>
+                    </div>
+                </a>
+                <a href="crm.html" class="tx-card">
+                    <span class="tx-icon">🔧</span>
+                    <div>
+                        <div class="tx-label">Órdenes de Trabajo</div>
+                        <div class="tx-sub">CRM</div>
+                    </div>
+                </a>
+                <a href="agenda.html" class="tx-card">
+                    <span class="tx-icon">🎫</span>
+                    <div>
+                        <div class="tx-label">Turnos</div>
+                        <div class="tx-sub">Agenda</div>
+                    </div>
+                </a>
+                <a href="agenda.html" class="tx-card">
+                    <span class="tx-icon">🎟</span>
+                    <div>
+                        <div class="tx-label">Entradas a Eventos</div>
+                        <div class="tx-sub">Agenda</div>
+                    </div>
+                </a>
+                <a href="index.html" class="tx-card">
+                    <span class="tx-icon">✚</span>
+                    <div>
+                        <div class="tx-label">Nueva Persona</div>
+                        <div class="tx-sub">BUP</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- FILA 3: CONSULTAS -->
+        <div class="hub-section">
+            <div class="hub-section-title">🔍 Consultas</div>
+            <div class="hub-row">
+                <a href="index.html" class="tx-card">
+                    <span class="tx-icon">👥</span>
+                    <div>
+                        <div class="tx-label">Consulta de Personas</div>
+                        <div class="tx-sub">BUP</div>
+                    </div>
+                </a>
+                <a href="crm.html" class="tx-card">
+                    <span class="tx-icon">📊</span>
+                    <div>
+                        <div class="tx-label">Tablero CRM</div>
+                        <div class="tx-sub">CRM</div>
+                    </div>
+                </a>
+                <a href="agenda.html" class="tx-card">
+                    <span class="tx-icon">📅</span>
+                    <div>
+                        <div class="tx-label">Calendario Agenda</div>
+                        <div class="tx-sub">Agenda</div>
+                    </div>
+                </a>
+                <a href="agenda.html" class="tx-card">
+                    <span class="tx-icon">⏳</span>
+                    <div>
+                        <div class="tx-label">Lista de Espera</div>
+                        <div class="tx-sub">Agenda</div>
+                    </div>
+                </a>
+                <a href="index.html" class="tx-card">
+                    <span class="tx-icon">📂</span>
+                    <div>
+                        <div class="tx-label">Padrones / Tablas</div>
+                        <div class="tx-sub">BUP</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="home-footer">
+        ZARIS v2.0.0 &nbsp;·&nbsp; Gestión Estatal &nbsp;·&nbsp; © 2026 Uso interno
+    </footer>
+
+    <script>
+        'use strict';
+
+        const KEY = 'bds_usuario';
+
+        /* ── Definición de los sub-menús por módulo ── */
+        const MODULE_MENUS = {
+            bup: [
+                { icon: '👤', label: 'Alta / Modificación de Persona', href: 'index.html' },
+                { icon: '🔍', label: 'Consulta de Personas', href: 'index.html' },
+                { sep: true },
+                { icon: '📂', label: 'Padrones (países, prov., localidades)', href: 'index.html' },
+                { icon: '👥', label: 'Usuarios del sistema', href: 'index.html' },
+                { icon: '📜', label: 'Auditoría', href: 'index.html' },
+            ],
+            crm: [
+                { icon: '📋', label: 'Bandeja de Incidentes', href: 'crm.html' },
+                { icon: '✚', label: 'Nuevo Incidente', href: 'crm.html' },
+                { sep: true },
+                { icon: '🔧', label: 'Órdenes de Trabajo', href: 'crm.html' },
+                { icon: '📊', label: 'Tablero', href: 'crm.html' },
+                { icon: '⚙️', label: 'Administración CRM', href: 'crm.html' },
+            ],
+            agenda: [
+                { icon: '📅', label: 'Calendario', href: 'agenda.html' },
+                { icon: '🎫', label: 'Nuevo Turno', href: 'agenda.html' },
+                { icon: '🎟', label: 'Nuevo Evento', href: 'agenda.html' },
+                { sep: true },
+                { icon: '⏳', label: 'Lista de Espera', href: 'agenda.html' },
+                { icon: '⚙️', label: 'Administración Agenda', href: 'mantenimiento.html' },
+            ],
+        };
+
+        /* ── Mega-nav logic ── */
+        const subNav = document.getElementById('subNav');
+
+        function openMenu(modKey) {
+            const items = MODULE_MENUS[modKey] || [];
+            subNav.innerHTML = items.map(item =>
+                item.sep
+                    ? '<div class="sub-nav-sep" aria-hidden="true"></div>'
+                    : `<a href="${item.href}" class="sub-nav-item">${item.icon} ${item.label}</a>`
+            ).join('');
+            subNav.hidden = false;
+        }
+
+        document.querySelectorAll('.module-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const mod = tab.dataset.module;
+                const wasOpen = tab.getAttribute('aria-expanded') === 'true';
+                // Cerrar todos
+                document.querySelectorAll('.module-tab').forEach(t => {
+                    t.setAttribute('aria-expanded', 'false');
+                    t.classList.remove('module-tab--active');
+                });
+                subNav.hidden = true;
+                // Si no estaba abierto, abrir
+                if (!wasOpen) {
+                    tab.setAttribute('aria-expanded', 'true');
+                    tab.classList.add('module-tab--active');
+                    openMenu(mod);
+                }
+            });
+        });
+
+        // Cerrar al hacer clic fuera del nav
+        document.addEventListener('click', e => {
+            if (!e.target.closest('.module-tab') && !e.target.closest('#subNav')) {
+                document.querySelectorAll('.module-tab').forEach(t => {
+                    t.setAttribute('aria-expanded', 'false');
+                    t.classList.remove('module-tab--active');
+                });
+                subNav.hidden = true;
+            }
+        });
+
+        /* ── FastAPI Backend URL ── */
+        const API_URL = 'https://zaris-api-production-bf0b.up.railway.app/api';
+
+        function getUsuario() { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }
+        function iniciales(n) { return n.trim().split(/\s+/).map(p => p[0].toUpperCase()).slice(0, 2).join(''); }
+
+        function renderHeader(u) {
+            document.getElementById('userAvatar').textContent = iniciales(u.nombre);
+            document.getElementById('userNombre').textContent = u.nombre;
+            const rol = document.getElementById('userRol');
+            rol.textContent = u.rol;
+            rol.className = 'user-rol rol--' + u.rol.toLowerCase();
+            document.getElementById('loginOverlay').hidden = true;
+        }
+
+        document.getElementById('formLogin').addEventListener('submit', async e => {
+            e.preventDefault();
+            const email = document.getElementById('login_email').value.trim().toLowerCase();
+            const pass = document.getElementById('login_pass').value;
+            const err = document.getElementById('loginError');
+            
+            try {
+                const btn = document.getElementById('btnLogin');
+                const btnOriginalText = btn.textContent;
+                btn.textContent = 'Autenticando...';
+                btn.disabled = true;
+
+                const resp = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ username: email, password: pass })
+                });
+
+                if (!resp.ok) {
+                    const errorData = await resp.json();
+                    err.textContent = errorData.detail || 'Correo o contraseña incorrectos.';
+                    err.hidden = false;
+                    btn.textContent = btnOriginalText;
+                    btn.disabled = false;
+                    return;
+                }
+
+                err.hidden = true;
+                const data = await resp.json();
+                
+                const ini = n => n.trim().split(/\s+/).map(p => p[0].toUpperCase()).slice(0, 2).join('');
+                const nombreCompleto = data.usuario.nombre + ' ' + data.usuario.apellido;
+                
+                const u = { nombre: nombreCompleto, email, rol: data.usuario.rol || 'CONSULTA', iniciales: ini(nombreCompleto), ts: Date.now() };
+                localStorage.setItem(KEY, JSON.stringify(u));
+                
+                const uBup = {
+                    token: data.access_token,
+                    id: data.usuario.id,
+                    nombre: data.usuario.nombre, 
+                    apellido: data.usuario.apellido,
+                    email, 
+                    rol: data.usuario.rol || 'CONSULTA', 
+                    iniciales: ini(nombreCompleto), 
+                    ts: Date.now()
+                };
+                localStorage.setItem('zaris_session', JSON.stringify(uBup));
+                renderHeader(u);
+                
+                btn.textContent = btnOriginalText;
+                btn.disabled = false;
+            } catch (error) {
+                console.error('Login error:', error);
+                err.textContent = 'Error de conexión con el servidor.';
+                err.hidden = false;
+                document.getElementById('btnLogin').textContent = 'Ingresar';
+                document.getElementById('btnLogin').disabled = false;
+            }
+        });
+
+        document.getElementById('btnShowPass').addEventListener('click', () => {
+            const inp = document.getElementById('login_pass');
+            inp.type = inp.type === 'password' ? 'text' : 'password';
+        });
+
+        document.getElementById('btnIrRecuperar').addEventListener('click', () => {
+            document.getElementById('panelLoginForm').hidden = true;
+            document.getElementById('panelRecuperar').hidden = false;
+        });
+
+        document.getElementById('btnVolver').addEventListener('click', () => {
+            document.getElementById('panelLoginForm').hidden = false;
+            document.getElementById('panelRecuperar').hidden = true;
+        });
+
+        document.getElementById('formRecuperar').addEventListener('submit', e => {
+            e.preventDefault();
+            document.getElementById('recSuccess').textContent = 'Instrucciones enviadas (simulado).';
+            document.getElementById('recSuccess').hidden = false;
+        });
+
+        document.getElementById('btnLogout').addEventListener('click', () => {
+            localStorage.removeItem(KEY);
+            localStorage.removeItem('zaris_session');
+            location.reload();
+        });
+
+        // Auto-login si hay sesión activa
+        const u = getUsuario();
+        if (u) renderHeader(u);
+    </script>
+</body>
+
+</html>

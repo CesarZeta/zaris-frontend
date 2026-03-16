@@ -1,0 +1,609 @@
+/* =============================================================
+   crm.css — ZARIS Módulo CRM
+   Complemento de styles.css — solo elementos exclusivos del CRM
+   ============================================================= */
+
+/* ── Toolbar de vistas ─────────────────────────────────────── */
+.view-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: .65rem;
+    margin-bottom: .85rem;
+}
+
+.view-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.view-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    flex-wrap: wrap;
+}
+
+/* ── Chips de estado del incidente ─────────────────────────── */
+.est-chip {
+    display: inline-block;
+    padding: .2rem .6rem;
+    border-radius: 4px;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    white-space: nowrap;
+}
+
+.est--sin-asignar {
+    background: var(--bg4);
+    color: var(--text2);
+}
+
+.est--en-proceso {
+    background: var(--info-bg);
+    color: var(--info);
+}
+
+.est--resuelto {
+    background: var(--success-bg);
+    color: var(--success);
+}
+
+.est--cancelado {
+    background: var(--danger-bg);
+    color: var(--danger);
+}
+
+.est--en-espera-terceros {
+    background: var(--warning-bg);
+    color: var(--warning);
+}
+
+/* ── SLA Indicator ─────────────────────────────────────────── */
+.sla-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    padding: .18rem .5rem;
+    border-radius: 4px;
+    font-size: .7rem;
+    font-weight: 700;
+}
+
+.sla--ok {
+    background: var(--success-bg);
+    color: var(--success);
+}
+
+.sla--warn {
+    background: var(--warning-bg);
+    color: var(--warning);
+}
+
+.sla--vencido {
+    background: var(--danger-bg);
+    color: var(--danger);
+}
+
+.sla--consulta {
+    background: var(--bg4);
+    color: var(--text3);
+}
+
+/* ── Categoría badge ────────────────────────────────────────── */
+.cat-badge {
+    display: inline-block;
+    padding: .18rem .5rem;
+    border-radius: 4px;
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.cat--reclamo {
+    background: var(--danger-bg);
+    color: var(--danger);
+}
+
+.cat--consulta {
+    background: var(--info-bg);
+    color: var(--info);
+}
+
+/* ── Tabla de datos ─────────────────────────────────────────── */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .82rem;
+}
+
+.data-table th {
+    text-align: left;
+    padding: .55rem .9rem;
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--text2);
+    border-bottom: 2px solid var(--border);
+    background: var(--bg3);
+    white-space: nowrap;
+}
+
+.data-table td {
+    padding: .5rem .9rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+.data-table tr:last-child td {
+    border-bottom: none;
+}
+
+.data-table tr:hover td {
+    background: var(--bg3);
+}
+
+.data-table tr.row--vencido td {
+    background: rgba(197, 34, 31, .04);
+}
+
+.data-table tr.row--terminal {
+    opacity: .65;
+}
+
+.empty-td {
+    text-align: center;
+    color: var(--text3);
+    padding: 2rem !important;
+    font-size: .85rem;
+}
+
+/* ── Empty state ─────────────────────────────────────────── */
+.empty-msg {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 3rem;
+    gap: .5rem;
+    color: var(--text2);
+}
+
+.empty-icon {
+    font-size: 2rem;
+}
+
+/* ── Modales ─────────────────────────────────────────────── */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    background: rgba(0, 0, 0, .45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modal-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    width: 100%;
+    max-width: 640px;
+    max-height: 90vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-box--lg {
+    max-width: 860px;
+}
+
+.modal-box--sm {
+    max-width: 440px;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem .75rem;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg2);
+    z-index: 1;
+}
+
+.modal-title {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    color: var(--text3);
+    padding: .25rem .5rem;
+    border-radius: var(--radius-sm);
+}
+
+.modal-close:hover {
+    background: var(--bg3);
+    color: var(--text);
+}
+
+.modal-body {
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: .85rem;
+    flex: 1;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: .65rem;
+    padding: .75rem 1.25rem;
+    border-top: 1px solid var(--border);
+    background: var(--bg3);
+}
+
+/* ── BUP inline search ─────────────────────────────────────── */
+.bup-search-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: .9rem 1rem;
+}
+
+.bup-search-label {
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--text2);
+    margin-bottom: .6rem;
+}
+
+.bup-found {
+    background: var(--success-bg);
+    border: 1px solid #a8d5b5;
+    color: var(--success);
+    padding: .45rem .75rem;
+    border-radius: var(--radius-sm);
+    font-size: .82rem;
+}
+
+.bup-notfound {
+    background: var(--warning-bg);
+    border: 1px solid #f0d58c;
+    color: var(--warning);
+    padding: .45rem .75rem;
+    border-radius: var(--radius-sm);
+    font-size: .82rem;
+}
+
+/* ── Alto inline ciudadano ─────────────────────────────────── */
+.alta-inline-box {
+    border: 2px dashed var(--border-focus);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    background: var(--info-bg);
+}
+
+.alta-inline-title {
+    font-size: .82rem;
+    font-weight: 700;
+    color: var(--info);
+    margin-bottom: .75rem;
+}
+
+/* ── Timeline de observaciones ─────────────────────────────── */
+.timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: .5rem 0;
+}
+
+.timeline-item {
+    display: flex;
+    gap: .85rem;
+    padding: .6rem 0;
+    position: relative;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: 14px;
+    top: 30px;
+    bottom: -10px;
+    width: 2px;
+    background: var(--border);
+}
+
+.timeline-item:last-child::before {
+    display: none;
+}
+
+.timeline-dot {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .8rem;
+    background: var(--bg3);
+    border: 2px solid var(--border);
+    z-index: 1;
+}
+
+.tl-creacion {
+    background: var(--success-bg);
+    border-color: var(--success);
+}
+
+.tl-cambio-estado {
+    background: var(--info-bg);
+    border-color: var(--info);
+}
+
+.tl-ot-creada {
+    background: var(--warning-bg);
+    border-color: var(--warning);
+}
+
+.tl-ot-completada {
+    background: var(--success-bg);
+    border-color: var(--success);
+}
+
+.tl-nota {
+    background: var(--bg4);
+    border-color: var(--border);
+}
+
+.timeline-content {
+    flex: 1;
+    padding-top: .1rem;
+}
+
+.timeline-meta {
+    font-size: .72rem;
+    color: var(--text3);
+    margin-bottom: .15rem;
+}
+
+.timeline-texto {
+    font-size: .82rem;
+    color: var(--text);
+}
+
+/* ── Detalle incidente ─────────────────────────────────────── */
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: .75rem;
+}
+
+.detail-item {}
+
+.detail-label {
+    font-size: .7rem;
+    font-weight: 700;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: .15rem;
+}
+
+.detail-value {
+    font-size: .88rem;
+    color: var(--text);
+}
+
+/* ── Tablero (KPIs) ─────────────────────────────────────────── */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.kpi-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    box-shadow: var(--shadow);
+}
+
+.kpi-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.1;
+}
+
+.kpi-label {
+    font-size: .78rem;
+    color: var(--text2);
+    margin-top: .2rem;
+}
+
+.kpi-sub {
+    font-size: .72rem;
+    color: var(--text3);
+    margin-top: .1rem;
+}
+
+/* ── Sub-tabs admin ─────────────────────────────────────────── */
+.subtabs-bar {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 1rem;
+}
+
+.subtab {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    padding: .5rem 1rem;
+    cursor: pointer;
+    font: inherit;
+    font-size: .82rem;
+    font-weight: 500;
+    color: var(--text2);
+    transition: color .15s, border-color .15s;
+}
+
+.subtab:hover {
+    color: var(--text);
+}
+
+.subtab--active {
+    color: var(--accent-dark);
+    font-weight: 700;
+    border-bottom-color: var(--accent);
+}
+
+/* ── Clasificación automática badge ────────────────────────── */
+.inferido-badge {
+    display: inline-flex;
+    gap: .3rem;
+    align-items: center;
+    background: var(--info-bg);
+    border: 1px solid #c5d8fa;
+    color: var(--info);
+    padding: .3rem .65rem;
+    border-radius: var(--radius-sm);
+    font-size: .78rem;
+    font-weight: 600;
+}
+
+/* ── Toasts ─────────────────────────────────────────────────── */
+.toast-container {
+    position: fixed;
+    bottom: 1.25rem;
+    right: 1.25rem;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    gap: .45rem;
+    pointer-events: none;
+}
+
+.toast {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: .6rem 1rem;
+    font-size: .83rem;
+    max-width: 340px;
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    transform: translateY(6px);
+    transition: all .25s ease;
+    pointer-events: auto;
+}
+
+.toast--show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast--ok {
+    border-left: 3px solid var(--success);
+}
+
+.toast--warn {
+    border-left: 3px solid var(--warning);
+}
+
+.toast--err {
+    border-left: 3px solid var(--danger);
+}
+
+/* ── Filtros panel ─────────────────────────────────────────── */
+.filtros-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    padding: .75rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+}
+
+/* ── OT estados ─────────────────────────────────────────────── */
+.ot-pend {
+    background: var(--warning-bg);
+    color: var(--warning);
+    padding: .18rem .5rem;
+    border-radius: 4px;
+    font-size: .72rem;
+    font-weight: 700;
+}
+
+.ot-proc {
+    background: var(--info-bg);
+    color: var(--info);
+    padding: .18rem .5rem;
+    border-radius: 4px;
+    font-size: .72rem;
+    font-weight: 700;
+}
+
+.ot-comp {
+    background: var(--success-bg);
+    color: var(--success);
+    padding: .18rem .5rem;
+    border-radius: 4px;
+    font-size: .72rem;
+    font-weight: 700;
+}
+
+.ot-canc {
+    background: var(--danger-bg);
+    color: var(--danger);
+    padding: .18rem .5rem;
+    border-radius: 4px;
+    font-size: .72rem;
+    font-weight: 700;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .header-nav {
+        display: none;
+    }
+
+    .view-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .detail-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .kpi-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}

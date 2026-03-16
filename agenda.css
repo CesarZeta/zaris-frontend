@@ -1,0 +1,623 @@
+/* =============================================================
+   agenda.css — ZARIS Módulo Agenda
+   Complemento de styles.css — solo elementos exclusivos de Agenda
+   ============================================================= */
+
+/* ── Toolbar de vistas ────────────────────────────────────── */
+.view-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: .65rem;
+    margin-bottom: .85rem;
+}
+
+.view-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.view-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    flex-wrap: wrap;
+}
+
+/* ── Calendario ─────────────────────────────────────────────── */
+.cal-week-label {
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--text);
+    min-width: 190px;
+    text-align: center;
+}
+
+.cal-scroll {
+    overflow-x: auto;
+}
+
+.ag-legend {
+    display: flex;
+    gap: 1rem;
+    padding: .75rem 1.25rem .5rem;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+}
+
+.ag-leg {
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: .75rem;
+    color: var(--text2);
+}
+
+.ag-leg::before {
+    content: '';
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, .12);
+    flex-shrink: 0;
+}
+
+.ag-leg--libre::before {
+    background: #e6f4ea;
+}
+
+.ag-leg--turno::before {
+    background: var(--accent-light);
+}
+
+.ag-leg--evento::before {
+    background: #fef7e0;
+}
+
+.ag-leg--cancelado::before {
+    background: var(--danger-bg);
+}
+
+.cal-table {
+    width: 100%;
+    min-width: 700px;
+    border-collapse: collapse;
+    font-size: .8rem;
+}
+
+.cal-table th {
+    padding: .45rem .5rem;
+    text-align: center;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    font-weight: 600;
+    color: var(--text2);
+    font-size: .75rem;
+}
+
+.cal-table th.cal-hoy {
+    background: var(--accent-light);
+    color: var(--accent-dark);
+}
+
+.cal-hora {
+    font-family: var(--mono);
+    font-size: .71rem;
+    color: var(--text3);
+    padding: .3rem .5rem;
+    border: 1px solid var(--border);
+    width: 52px;
+    text-align: right;
+    background: var(--bg3);
+    white-space: nowrap;
+}
+
+.cal-cell {
+    border: 1px solid var(--border);
+    padding: .25rem .35rem;
+    height: 32px;
+    vertical-align: top;
+    min-width: 105px;
+    transition: background .12s;
+}
+
+.cal-cell--libre {
+    background: var(--bg2);
+    cursor: pointer;
+}
+
+.cal-cell--libre:hover {
+    background: var(--success-bg);
+}
+
+.cal-cell--turno {
+    background: var(--accent-light);
+}
+
+.cal-cell--evento {
+    background: var(--warning-bg);
+}
+
+.cal-cell--cancelado {
+    background: var(--danger-bg);
+}
+
+.cal-tip {
+    font-size: .68rem;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+/* ── Tablas de datos ─────────────────────────────────────── */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .82rem;
+}
+
+.data-table th {
+    text-align: left;
+    padding: .55rem .9rem;
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--text2);
+    border-bottom: 2px solid var(--border);
+    background: var(--bg3);
+    white-space: nowrap;
+}
+
+.data-table td {
+    padding: .55rem .9rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+.data-table tr:last-child td {
+    border-bottom: none;
+}
+
+.data-table tr:hover td {
+    background: var(--bg3);
+}
+
+.empty-td {
+    text-align: center;
+    color: var(--text3);
+    padding: 2rem !important;
+}
+
+/* ── Empty state ─────────────────────────────────────────── */
+.empty-msg {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2.5rem;
+    color: var(--text2);
+    gap: .5rem;
+}
+
+.empty-icon {
+    font-size: 1.75rem;
+}
+
+.empty-msg p {
+    font-size: .85rem;
+}
+
+/* ── Estado badges ─────────────────────────────────────── */
+.st-pend {
+    background: var(--warning-bg);
+    color: var(--warning);
+    padding: .18rem .5rem;
+    border-radius: 4px;
+    font-size: .72rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.st-ok {
+    background: var(--success-bg);
+    color: var(--success);
+    padding: .18rem .5rem;
+    border-radius: 4px;
+    font-size: .72rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.st-inact {
+    background: var(--danger-bg);
+    color: var(--danger);
+    padding: .18rem .5rem;
+    border-radius: 4px;
+    font-size: .72rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.st-comp {
+    background: var(--info-bg);
+    color: var(--info);
+    padding: .18rem .5rem;
+    border-radius: 4px;
+    font-size: .72rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* ── Tipo de espacio ─────────────────────────────────────── */
+.tipo-badge {
+    padding: .18rem .45rem;
+    border-radius: 4px;
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.tipo-badge--atendido {
+    background: var(--info-bg);
+    color: var(--info);
+}
+
+.tipo-badge--desatendido {
+    background: var(--bg4);
+    color: var(--text2);
+}
+
+/* ── Eventos lista ─────────────────────────────────────── */
+.eventos-lista {
+    display: flex;
+    flex-direction: column;
+    gap: .9rem;
+}
+
+.evento-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 1.25rem 1.5rem;
+    transition: border-color .15s;
+}
+
+.evento-card:hover {
+    border-color: var(--accent);
+}
+
+.evento-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: .75rem;
+}
+
+.evento-nombre {
+    font-size: .95rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: .2rem;
+}
+
+.evento-meta {
+    font-size: .78rem;
+    color: var(--text2);
+}
+
+.evento-desc {
+    font-size: .8rem;
+    color: var(--text2);
+    margin-top: .2rem;
+}
+
+.cupo-container {
+    margin-bottom: .75rem;
+}
+
+.cupo-bar {
+    height: 5px;
+    background: var(--bg4);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: .25rem;
+}
+
+.cupo-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 999px;
+    transition: width .3s;
+}
+
+.cupo-label {
+    font-size: .74rem;
+    color: var(--text2);
+}
+
+.evento-actions {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+}
+
+/* ── BUP search ─────────────────────────────────────────── */
+.bup-search-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: .9rem 1rem;
+    margin-bottom: 1rem;
+}
+
+.bup-search-label {
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--text2);
+    margin-bottom: .6rem;
+}
+
+.bup-result {
+    margin-top: .5rem;
+}
+
+.bup-found {
+    background: var(--success-bg);
+    border: 1px solid #a8d5b5;
+    color: var(--success);
+    padding: .45rem .75rem;
+    border-radius: var(--radius-sm);
+    font-size: .8rem;
+}
+
+.bup-notfound {
+    background: var(--warning-bg);
+    border: 1px solid #f0d58c;
+    color: var(--warning);
+    padding: .45rem .75rem;
+    border-radius: var(--radius-sm);
+    font-size: .8rem;
+}
+
+/* ── Modales ─────────────────────────────────────────────── */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    background: rgba(0, 0, 0, .45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modal-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.modal-box--qr {
+    max-width: 360px;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem .75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-title {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    color: var(--text3);
+    padding: .25rem .5rem;
+    border-radius: var(--radius-sm);
+}
+
+.modal-close:hover {
+    background: var(--bg3);
+    color: var(--text);
+}
+
+.modal-box>form,
+.modal-box>.bup-search-box,
+.modal-box>p,
+.modal-box>.form-group,
+.modal-box>.alert {
+    padding: 0 1.25rem;
+}
+
+.modal-box>form {
+    padding: .75rem 1.25rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.modal-desc {
+    padding: .6rem 1.25rem 0;
+    font-size: .85rem;
+    color: var(--text2);
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: .65rem;
+    padding: .75rem 1.25rem;
+    border-top: 1px solid var(--border);
+    background: var(--bg3);
+    margin-top: .75rem;
+}
+
+/* ── QR ─────────────────────────────────────────────────── */
+.qr-container {
+    display: flex;
+    justify-content: center;
+    padding: 1rem;
+    background: #fff;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    margin: .75rem 1.25rem;
+}
+
+.qr-code-text {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: .72rem;
+    color: var(--text2);
+    letter-spacing: .04em;
+    padding: 0 1.25rem;
+    word-break: break-all;
+}
+
+.qr-note {
+    text-align: center;
+    font-size: .72rem;
+    color: var(--text3);
+    padding: .25rem 1.25rem .5rem;
+}
+
+/* ── Admin sub-tabs ─────────────────────────────────────── */
+.subtabs-bar {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 1rem;
+}
+
+.subtab {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    padding: .5rem 1rem;
+    cursor: pointer;
+    font: inherit;
+    font-size: .82rem;
+    font-weight: 500;
+    color: var(--text2);
+    transition: color .15s, border-color .15s;
+}
+
+.subtab:hover {
+    color: var(--text);
+}
+
+.subtab--active {
+    color: var(--accent-dark);
+    font-weight: 700;
+    border-bottom-color: var(--accent);
+}
+
+.admin-panel {
+    display: flex;
+    flex-direction: column;
+    gap: .85rem;
+}
+
+/* ── Toasts ─────────────────────────────────────────────── */
+.toast-container {
+    position: fixed;
+    bottom: 1.25rem;
+    right: 1.25rem;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    gap: .45rem;
+    pointer-events: none;
+}
+
+.toast {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: .6rem 1rem;
+    font-size: .83rem;
+    max-width: 340px;
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    transform: translateY(6px);
+    transition: all .25s ease;
+    pointer-events: auto;
+}
+
+.toast--show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast--ok {
+    border-left: 3px solid var(--success);
+}
+
+.toast--warn {
+    border-left: 3px solid var(--warning);
+}
+
+.toast--err {
+    border-left: 3px solid var(--danger);
+}
+
+/* ── Print (QR) ─────────────────────────────────────────── */
+@media print {
+    body>*:not(#modalQR) {
+        display: none !important;
+    }
+
+    .modal-overlay {
+        position: static;
+        background: none;
+        padding: 0;
+    }
+
+    .modal-box {
+        box-shadow: none;
+        border: none;
+    }
+
+    .modal-header,
+    .modal-footer {
+        display: none;
+    }
+}
+
+/* ── Responsive ─────────────────────────────────────────── */
+@media (max-width: 700px) {
+    .header-nav {
+        display: none;
+    }
+
+    .view-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

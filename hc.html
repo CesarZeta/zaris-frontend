@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Historia Clínica — ZARIS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+        .hc-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 1.5rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            align-items: start;
+        }
+
+        .paciente-sidebar {
+            background: var(--bg2);
+            border-right: 1px solid var(--border);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: 5rem;
+        }
+
+        .paciente-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0 auto 1rem;
+        }
+
+        .paciente-nombre {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.25rem;
+        }
+
+        .paciente-dni {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text2);
+            margin-bottom: 1.5rem;
+        }
+
+        .info-block {
+            margin-bottom: 1.25rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .info-block:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .info-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text3);
+            margin-bottom: 0.25rem;
+            font-weight: 600;
+        }
+
+        .info-value {
+            font-size: 0.85rem;
+            color: var(--text);
+            line-height: 1.4;
+        }
+
+        /* Timeline de HC */
+        .hc-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .registro-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .registro-card.es-borrador {
+            border-left: 4px solid var(--warning);
+        }
+
+        .registro-card.es-cerrado {
+            border-left: 4px solid var(--primary);
+        }
+
+        .registro-card.es-anulado {
+            border-left: 4px solid var(--danger);
+            opacity: 0.7;
+        }
+
+        .registro-header {
+            padding: 1rem 1.25rem;
+            background: var(--bg3);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .registro-titulo {
+            font-weight: 600;
+            color: var(--text);
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .registro-meta {
+            font-size: 0.75rem;
+            color: var(--text2);
+        }
+
+        .registro-body {
+            padding: 1.25rem;
+        }
+
+        .campo-medico {
+            margin-bottom: 1rem;
+        }
+
+        .campo-medico:last-child {
+            margin-bottom: 0;
+        }
+
+        .campo-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text3);
+            text-transform: uppercase;
+            margin-bottom: 0.3rem;
+        }
+
+        .campo-valor {
+            font-size: 0.9rem;
+            color: var(--text);
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .registro-actions {
+            padding: 1rem 1.25rem;
+            background: var(--bg-body);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        /* Formulario de Atención */
+        .hc-form {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 2rem;
+            border-top: 4px solid var(--accent);
+        }
+
+        .hc-form-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        .hc-form-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        /* Buscador overlay inicial */
+        .hc-overlay-buscador {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--bg-body);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .buscador-caja {
+            background: var(--bg2);
+            padding: 2.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        /* Badges de estado */
+        .badge-estado {
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            text-transform: uppercase;
+        }
+
+        .badge--borrador { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid var(--warning); }
+        .badge--cerrado { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid var(--success); }
+        .badge--anulado { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid var(--danger); }
+    </style>
+</head>
+
+<body>
+
+    <header class="app-header" role="banner">
+        <div class="primary-nav">
+            <div class="header-brand">
+                <a href="home.html" aria-label="Inicio">
+                    <img src="Images/LOGO_ZARIS.gif" alt="ZARIS" class="header-logo" />
+                </a>
+                <div class="brand-text">
+                    <span class="brand-name">ZARIS</span>
+                    <span class="brand-subtitle">Historia Clínica</span>
+                </div>
+            </div>
+            <nav class="module-tabs">
+                <button class="module-tab module-tab--active" aria-expanded="true">
+                    🩺 Historia Clínica
+                </button>
+            </nav>
+            <div class="header-user">
+                <div class="user-chip">
+                    <div class="user-avatar" id="userAvatar">--</div>
+                    <div class="user-info">
+                        <span class="user-name" id="userNombre">—</span>
+                        <span class="user-rol" id="userRol">—</span>
+                    </div>
+                </div>
+                <button class="btn btn--outline btn--sm" id="btnLogout">⏏ Salir</button>
+            </div>
+        </div>
+        <nav class="sub-nav">
+            <a href="agenda.html" class="sub-nav-item nav-btn" style="text-decoration:none">← Volver a Agenda</a>
+            <div class="sub-nav-sep"></div>
+            <button class="sub-nav-item nav-btn nav-btn--active" id="btnVerFicha">📄 Ficha Clínica</button>
+            <button class="sub-nav-item nav-btn" id="btnBuscarOtro">🔍 Buscar otro Paciente</button>
+        </nav>
+    </header>
+
+    <!-- Overlay Buscador Inicial -->
+    <div id="overlayBuscador" class="hc-overlay-buscador">
+        <div class="buscador-caja">
+            <div style="font-size:3rem; margin-bottom:1rem">🪪</div>
+            <h2 style="margin-bottom:0.5rem">Identificar Paciente</h2>
+            <p style="color:var(--text2); font-size:0.9rem; margin-bottom:1.5rem">
+                Ingrese el DNI y Sexo Registral para acceder a la Historia Clínica.
+            </p>
+            <form id="formBuscarPaciente">
+                <div class="form-group" style="text-align:left">
+                    <label class="form-label">N.º Documento</label>
+                    <input type="number" id="busq_dni" class="form-control" required placeholder="Ej: 28456789" />
+                </div>
+                <div class="form-group" style="text-align:left">
+                    <label class="form-label">Sexo Registral</label>
+                    <select id="busq_sexo" class="form-control" required>
+                        <option value="">— Seleccione —</option>
+                        <option value="M">Masculino</option>
+                        <option value="F">Femenino</option>
+                        <option value="X">No binario</option>
+                    </select>
+                </div>
+                <div id="busqError" class="alert alert--error" hidden style="margin-top:1rem; text-align:left"></div>
+                <button type="submit" class="btn btn--primary btn--full" style="margin-top:1rem">Acceder a la Ficha</button>
+            </form>
+        </div>
+    </div>
+
+    <main class="main-content" id="mainContent" hidden>
+        <div class="hc-layout">
+            <!-- Sidebar: Datos del Paciente (Solo Lectura, provienen de BUP) -->
+            <aside class="paciente-sidebar">
+                <div class="paciente-avatar" id="pacAvatar">--</div>
+                <div class="paciente-nombre" id="pacNombre">—</div>
+                <div class="paciente-dni" id="pacDNI">—</div>
+
+                <div class="info-block">
+                    <div class="info-label">Fecha de Nacimiento</div>
+                    <div class="info-value" id="pacEdad">--/--/---- (-- años)</div>
+                </div>
+
+                <div class="info-block">
+                    <div class="info-label">Cobertura / Obra Social</div>
+                    <div class="info-value" id="pacObraSocial"><i>Sin especificar</i></div>
+                    <div class="info-value"><small id="pacNroAfiliado"></small></div>
+                </div>
+
+                <div class="info-block">
+                    <div class="info-label">Contacto</div>
+                    <div class="info-value" id="pacTelefono">--</div>
+                    <div class="info-value" id="pacEmail">--</div>
+                </div>
+
+                <div class="info-block">
+                    <div class="info-label">Contacto de Emergencia</div>
+                    <div class="info-value" id="pacEmergencia"><i>Sin especificar</i></div>
+                </div>
+                
+                <button id="btnNuevaAtencion" class="btn btn--primary btn--full" style="margin-top: 1rem">+ Registrar Atención</button>
+            </aside>
+
+            <!-- Área Principal: Timeline y Formulario -->
+            <section class="hc-main">
+                
+                <!-- Formulario de Nueva Atención (Oculto por defecto) -->
+                <div id="panelFormAtencion" class="hc-form" hidden>
+                    <div class="hc-form-header">
+                        <h3 class="hc-form-title">Nueva Atención Médica</h3>
+                        <span class="badge-estado badge--borrador">BORRADOR</span>
+                    </div>
+                    
+                    <form id="formAtencion">
+                        <div class="form-row">
+                            <div class="form-group" style="flex:1">
+                                <label class="form-label">Fecha y Hora</label>
+                                <input type="datetime-local" id="hc_fecha" class="form-control" required />
+                            </div>
+                            <div class="form-group" style="flex:1">
+                                <label class="form-label">Profesional Interviniente</label>
+                                <input type="text" id="hc_profesional" class="form-control" readonly />
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Motivo de Consulta <span class="req">*</span></label>
+                            <input type="text" id="hc_motivo" class="form-control" required placeholder="Ej: Control evolutivo, dolor abdominal..." />
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group form-group--lg">
+                                <label class="form-label">Antecedentes</label>
+                                <textarea id="hc_antecedentes" class="form-control" rows="2" placeholder="Antecedentes personales o familiares relevantes"></textarea>
+                            </div>
+                            <div class="form-group form-group--lg">
+                                <label class="form-label">Examen Físico</label>
+                                <textarea id="hc_examen" class="form-control" rows="2" placeholder="Signos vitales, hallazgos físicos..."></textarea>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Diagnóstico <span class="req">*</span></label>
+                            <input type="text" id="hc_diagnostico" class="form-control" required placeholder="Diagnóstico presuntivo o definitivo (Ej: Faringitis aguda)" />
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group form-group--lg">
+                                <label class="form-label">Tratamiento / Recetas</label>
+                                <textarea id="hc_tratamiento" class="form-control" rows="3" placeholder="Medicación indicada, dosis y frecuencia"></textarea>
+                            </div>
+                            <div class="form-group form-group--lg">
+                                <label class="form-label">Indicaciones / Evolución</label>
+                                <textarea id="hc_indicaciones" class="form-control" rows="3" placeholder="Pautas de alarma, próxima visita..."></textarea>
+                            </div>
+                        </div>
+
+                        <div class="alert alert--info" style="margin-bottom: 1.5rem">
+                            <strong>Atención:</strong> Guardar como borrador permite seguir editando. Al "Cerrar Atención", el registro quedará inalterable y solo lectura.
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" id="btnCancelarAtencion" class="btn btn--outline">Descartar</button>
+                            <div class="actions-right">
+                                <button type="button" id="btnGuardarBorrador" class="btn btn--outline">💾 Guardar Borrador</button>
+                                <button type="submit" id="btnCerrarAtencion" class="btn btn--primary">🔒 Cerrar Atención</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Línea de Tiempo de Evoluciones -->
+                <div class="toolbar" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 1rem">
+                    <h2 class="view-title" style="margin:0">Historial Médico</h2>
+                    <div style="font-size: 0.8rem; color: var(--text3)">Ordenado por fecha más reciente</div>
+                </div>
+                
+                <div id="hcTimeline" class="hc-timeline">
+                    <!-- Registros dinámicos -->
+                    <div class="empty-state">
+                        <span style="font-size:2rem">📂</span>
+                        <p>No hay atenciones registradas para este paciente.</p>
+                    </div>
+                </div>
+
+            </section>
+        </div>
+    </main>
+
+    <!-- Modal Anular Registro -->
+    <div id="modalAnular" class="modal-overlay" hidden>
+        <div class="modal">
+            <div class="modal-header">
+                <h3>⚠ Anular Registro Médico</h3>
+            </div>
+            <div class="modal-body">
+                <p>Está a punto de anular lógicamente un registro clínico. Esta acción <strong>no elimina</strong> el registro, pero lo marca como inválido (enmienda).</p>
+                <div class="form-group" style="margin-top:1rem">
+                    <label class="form-label">Motivo de la Anulación <span class="req">*</span></label>
+                    <textarea id="motivoAnulacion" class="form-control" rows="3" placeholder="Ej: Error al imputar registro en paciente equivocado" required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--outline" id="btnCancelAnular">Cancelar</button>
+                <button type="button" class="btn btn--danger" id="btnConfirmAnular">Confirmar Anulación</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor Toast -->
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+    <script src="hc.js"></script>
+</body>
+
+</html>
