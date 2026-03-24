@@ -9,11 +9,9 @@ const Auth = (() => {
   const g = () => { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } };
   const s = u => localStorage.setItem(KEY, JSON.stringify(u));
   const clr = () => { localStorage.removeItem(KEY); localStorage.removeItem('zaris_session'); };
-  const ini = n => n.trim().split(/\s+/).map(p => p[0].toUpperCase()).slice(0, 2).join('');
-  // Login delegado a home.html (que usa fetch a FastAPI)
-  const login = () => { console.warn("Usar home.html para login."); return null; };
+  const getToken = () => { try { const sess = JSON.parse(localStorage.getItem('zaris_session')); return sess?.access_token || null; } catch { return null; } };
   return {
-    get: g, set: s, clear: clr, ini, login,
+    get: g, set: s, clear: clr, getToken,
     esAdmin: () => g()?.rol === 'ADMINISTRADOR',
     esColab: () => ['ADMINISTRADOR', 'COLABORADOR'].includes(g()?.rol),
   };
@@ -323,8 +321,16 @@ function initLogin() {
   onLoggedIn();
 }
 
-function onLoggedIn() {
-  renderHeader(); applyRoleUI(); cargarDemoData(); popularFiltros(); renderBandeja();
+async function onLoggedIn() {
+  renderHeader();
+  applyRoleUI();
+  try {
+    await cargarMaestros();   // carga _cache desde /api/crm/*
+    popularFiltros();
+    await renderBandeja();
+  } catch (e) {
+    showToast('Error cargando datos del servidor: ' + e.message, 'err');
+  }
 }
 
 function renderHeader() {
@@ -379,21 +385,21 @@ function initNav() {
 
 // ── Filtros ──────────────────────────────────────────────────
 function popularFiltros() {
+  // Área filtro bandeja
   ['filtroArea', 'tipoArea'].forEach(id => {
     const sel = $(id); if (!sel) return;
-    const primero = sel.options[0];
-    sel.innerHTML = ''; sel.appendChild(primero);
-    Store.areas().filter(a => a.activo).forEach(a => { const o = document.createElement('option'); o.value = a.id; o.textContent = a.nombre; sel.appendChild(o); });
+    const primero = sel.options[0]; sel.innerHTML = ''; sel.appendChild(primero);
+    _cache.areas.filter(a => a.activo).forEach(a => { const o = document.createElement('option'); o.value = a.id; o.textContent = a.nombre; sel.appendChild(o); });
   });
-  // Filtros OT: áreas de gestión
+  // Filtros OT: áreas de gestión (usamos subareas de _cache agrupadas)
   const otAG = $('otFiltroAreaGestion'); if (otAG) {
     const p = otAG.options[0]; otAG.innerHTML = ''; otAG.appendChild(p);
-    Store.areasG().filter(a => a.activo).forEach(a => { const o = document.createElement('option'); o.value = a.id; o.textContent = a.nombre; otAG.appendChild(o); });
+    _cache.areas.filter(a => a.activo).forEach(a => { const o = document.createElement('option'); o.value = a.id; o.textContent = a.nombre; otAG.appendChild(o); });
   }
-  // Filtros OT: técnicos
+  // Técnicos filtro OT: agentes de sub-área
   const otT = $('otFiltroTecnico'); if (otT) {
     const p = otT.options[0]; otT.innerHTML = ''; otT.appendChild(p);
-    Store.tecnicos().filter(t => t.activo).forEach(t => { const o = document.createElement('option'); o.value = t.id; o.textContent = t.apellido + ', ' + t.nombre; otT.appendChild(o); });
+    _cache.agentesSubarea.forEach(a => { const o = document.createElement('option'); o.value = a.id_usuario; o.textContent = a.id_usuario; otT.appendChild(o); });
   }
 }
 function popularSubareas(areaId, selId) {
@@ -437,68 +443,59 @@ function exportarXLS(datos, nombre) {
   XLSX.writeFile(wb, nombre + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
 }
 
-function renderBandeja() {
-  const estado = $('filtroEstado')?.value || '';
-  const categ = $('filtroCategoria')?.value || '';
-  const area = +($('filtroArea')?.value || 0);
-  const desde = $('filtroDesde')?.value || '';
-  const hasta = $('filtroHasta')?.value || '';
-  const buscar = ($('filtroBuscar')?.value || '').toLowerCase();
-  let data = Store.incidentes();
-  if (estado) data = data.filter(i => i.id_estado === estado);
-  if (categ) data = data.filter(i => { const t = Store.tipos().find(x => x.id === i.id_tipo); return t?.categoria === categ; });
-  if (area) data = data.filter(i => { const t = Store.tipos().find(x => x.id === i.id_tipo); const s = Store.subareas().find(x => x.id === t?.id_subarea); return s?.id_area === area; });
-  if (desde) data = data.filter(i => i.created_at >= desde);
-  if (hasta) data = data.filter(i => i.created_at <= hasta + 'T23:59:59');
-  if (buscar) data = data.filter(i => {
-    const ref = (i.nro_referencia || nroRef(i.id)).toLowerCase();
-    const p = Store.personas().find(x => x.id === i.persona_id);
-    const nombre = (p ? p.apellido + ' ' + p.nombre : '').toLowerCase();
-    return ref.includes(buscar) || nombre.includes(buscar) || i.descripcion?.toLowerCase().includes(buscar);
-  });
-  data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  const tbody = $('tablaBandejaBody'); tbody.innerHTML = '';
+async function renderBandeja() {
+  const estado  = $('filtroEstado')?.value  || '';
+  const categ   = $('filtroCategoria')?.value || '';
+  const area    = $('filtroArea')?.value      || '';
+  const desde   = $('filtroDesde')?.value     || '';
+  const hasta   = $('filtroHasta')?.value     || '';
+  const buscar  = $('filtroBuscar')?.value    || '';
+  const tbody = $('tablaBandejaBody'); tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:1.5rem">⏳ Cargando…</td></tr>';
+  let data;
+  try {
+    data = await ApiInc.lista({ estado_id: estado, categoria: categ, area_id: area, desde, hasta, buscar });
+  } catch (e) { showToast('Error cargando bandeja: ' + e.message, 'err'); return; }
   const vacio = $('bandejaVacio');
+  tbody.innerHTML = '';
   if (!data.length) { vacio.hidden = false; return; }
   vacio.hidden = true;
   data.forEach(inc => {
-    const p = Store.personas().find(x => x.id === inc.persona_id);
-    const tipo = Store.tipos().find(x => x.id === inc.id_tipo);
-    const sub = Store.subareas().find(x => x.id === tipo?.id_subarea);
-    const ar = Store.areas().find(x => x.id === sub?.id_area);
-    const canal = Store.canales().find(x => x.id === inc.id_canal);
-    const est = ESTADOS[inc.id_estado] || ESTADOS.PENDIENTE;
-    const vencido = inc.fecha_limite_sla && new Date(inc.fecha_limite_sla) < new Date() && !est.terminal;
+    const est = ESTADOS[inc.estado_nombre] || ESTADOS.SIN_ASIGNAR;
+    const vencido = inc.sla_status === 'VENCIDO';
     const tr = document.createElement('tr');
     if (vencido) tr.className = 'row--vencido';
-    if (est.terminal) tr.className = 'row--terminal';
+    if (inc.es_terminal) tr.className = 'row--terminal';
     tr.innerHTML = `
-      <td style="font-family:var(--mono);font-size:.76rem">${inc.nro_referencia || nroRef(inc.id)}</td>
-      <td>${p ? p.apellido + ', ' + p.nombre : '—'}</td>
-      <td>${tipo?.nombre || '—'}<br><small style="color:var(--text3)">${ar?.nombre || '—'}</small></td>
-      <td><span class="cat-badge cat--${(tipo?.categoria || 'consulta').toLowerCase()}">${tipo?.categoria || '—'}</span></td>
+      <td style="font-family:var(--mono);font-size:.76rem">${inc.nro_referencia || inc.id}</td>
+      <td>${inc.ciudadano || '—'}</td>
+      <td>${inc.tipo_nombre || '—'}<br><small style="color:var(--text3)">${inc.area_nombre || '—'}</small></td>
+      <td><span class="cat-badge cat--${(inc.categoria||'consulta').toLowerCase()}">${inc.categoria||'—'}</span></td>
       <td><span class="est-chip ${est.cls}">${est.label}</span>${inc.id_incidente_padre ? '<br><small style="color:var(--text3)">🔗 hijo</small>' : ''}</td>
-      <td>${slaChip(inc)}</td>
-      <td>${canal?.nombre || '—'}</td>
+      <td>${slaChipFromApi(inc)}</td>
+      <td>${inc.canal_nombre || '—'}</td>
       <td style="font-size:.78rem">${fmtFecha(inc.created_at)}</td>
       <td><button class="btn btn--outline btn--sm" data-det="${inc.id}">👁 Ver</button></td>`;
     tbody.appendChild(tr);
   });
   tbody.querySelectorAll('[data-det]').forEach(b => b.addEventListener('click', () => abrirDetalle(+b.dataset.det)));
-  ['filtroEstado', 'filtroCategoria', 'filtroArea', 'filtroDesde', 'filtroHasta'].forEach(id => { if ($(id)) $(id).onchange = renderBandeja; });
+  ['filtroEstado','filtroCategoria','filtroArea','filtroDesde','filtroHasta'].forEach(id => { if ($(id)) $(id).onchange = renderBandeja; });
   if ($('filtroBuscar')) $('filtroBuscar').oninput = renderBandeja;
   if ($('btnLimpiarFiltros')) $('btnLimpiarFiltros').onclick = () => {
-    ['filtroEstado', 'filtroCategoria', 'filtroArea', 'filtroDesde', 'filtroHasta', 'filtroBuscar'].forEach(id => { if ($(id)) $(id).value = ''; });
+    ['filtroEstado','filtroCategoria','filtroArea','filtroDesde','filtroHasta','filtroBuscar'].forEach(id => { if ($(id)) $(id).value = ''; });
     renderBandeja();
   };
   if ($('btnExportarBandeja')) $('btnExportarBandeja').onclick = () => {
-    const rows = data.map(inc => {
-      const p = Store.personas().find(x => x.id === inc.persona_id);
-      const tipo = Store.tipos().find(x => x.id === inc.id_tipo);
-      return { Referencia: inc.nro_referencia || nroRef(inc.id), Ciudadano: p ? p.apellido + ' ' + p.nombre : '—', Tipo: tipo?.nombre || '—', Categoria: tipo?.categoria || '—', Estado: ESTADOS[inc.id_estado]?.label || inc.id_estado, Fecha: fmtFecha(inc.created_at) };
-    });
+    const rows = data.map(i => ({ Referencia: i.nro_referencia, Ciudadano: i.ciudadano, Tipo: i.tipo_nombre, Categoria: i.categoria, Estado: i.estado_nombre, Fecha: fmtFecha(i.created_at) }));
     exportarXLS(rows, 'Incidentes');
   };
+}
+
+function slaChipFromApi(inc) {
+  if (!inc.fecha_limite_sla || inc.categoria === 'CONSULTA') return '<span class="sla-chip sla--consulta">Sin SLA</span>';
+  if (inc.es_terminal) return '<span class="sla-chip sla--ok">Cerrado</span>';
+  const m = { VENCIDO: '<span class="sla-chip sla--vencido">⚠ Vencido</span>', POR_VENCER: '<span class="sla-chip sla--warn">⏳ Por vencer</span>', EN_TIEMPO: '' };
+  if (inc.sla_status in m && m[inc.sla_status]) return m[inc.sla_status];
+  return '<span class="sla-chip sla--ok">En tiempo</span>';
 }
 
 // ── NUEVO INCIDENTE (formulario inline) ──────────────────────
@@ -676,35 +673,27 @@ function inferirAreaDesc() {
   } else { box.hidden = true; }
 }
 
-function guardarNuevoIncidente() {
+async function guardarNuevoIncidente() {
   if (!_nuevaPersonaId) { showToast('Debe identificar un ciudadano', 'warn'); return; }
   const canalId = +$('ni_canal').value, tipoId = +$('ni_tipo').value, desc = $('ni_descripcion').value.trim();
   const calle = $('ni_calle').value.trim(), altura = $('ni_altura').value.trim();
   const err = $('niError');
   if (!canalId || !tipoId || !desc) { err.textContent = 'Canal, tipo de incidente y descripción son obligatorios.'; err.hidden = false; return; }
-  const tipo = Store.tipos().find(t => t.id === tipoId);
-  const u = Auth.get();
-  const ahora = new Date().toISOString();
-  const sla = tipo?.sla_horas ? new Date(Date.now() + tipo.sla_horas * 3600000).toISOString() : null;
-  const inc = Store.saveInc({
-    persona_id: _nuevaPersonaId, id_tipo: tipoId, id_canal: canalId,
-    id_estado: 'PENDIENTE', descripcion: desc, ubicacion_calle: calle, ubicacion_altura: altura,
-    id_incidente_padre: _incPadreId || null, id_usuario_creador: u.email,
-    fecha_limite_sla: sla, created_at: ahora, updated_at: ahora
-  });
-  inc.nro_referencia = nroRef(inc.id);
-  Store.saveInc(inc);
-  Store.addObs({
-    id_incidente: inc.id, usuario: u.email, tipo: 'CREACION',
-    texto: 'Incidente creado. Canal: ' + (Store.canales().find(c => c.id === canalId)?.nombre || '—'),
-    estado_nuevo: 'PENDIENTE', created_at: ahora
-  });
-  if (_incPadreId) {
-    MaquinaEstados.crearHijo(_incPadreId, { persona_id: inc.persona_id, id_tipo: inc.id_tipo, id_canal: inc.id_canal, descripcion: inc.descripcion, ubicacion_calle: inc.ubicacion_calle, ubicacion_altura: inc.ubicacion_altura, id_usuario_creador: u.email, fecha_limite_sla: sla }, u.email);
-  }
-  showToast('✅ Incidente ' + inc.nro_referencia + ' registrado', 'ok');
-  showView('bandeja'); renderBandeja();
+  try {
+    const inc = await ApiInc.crear({
+      id_persona: _nuevaPersonaId,
+      id_tipo: tipoId,
+      id_canal_origen: canalId,
+      descripcion: desc,
+      ubicacion_calle: calle || null,
+      ubicacion_altura: altura || null,
+      id_incidente_padre: _incPadreId || null,
+    });
+    showToast('✅ Incidente ' + (inc.nro_referencia || inc.id) + ' registrado', 'ok');
+    showView('bandeja'); renderBandeja();
+  } catch (e) { err.textContent = e.message; err.hidden = false; }
 }
+
 
 // ============================================================
 // crm.js — Parte 4/4: Detalle, Modales, OT, Tablero, Admin, Bootstrap
@@ -713,90 +702,68 @@ function guardarNuevoIncidente() {
 // ── DETALLE ──────────────────────────────────────────────────
 let _detalleId = null;
 
-function abrirDetalle(id) {
+async function abrirDetalle(id) {
   _detalleId = id;
-  const inc = Store.incidentes().find(i => i.id === id); if (!inc) return;
-  const tipo = Store.tipos().find(t => t.id === inc.id_tipo);
-  const sub = Store.subareas().find(s => s.id === tipo?.id_subarea);
-  const area = Store.areas().find(a => a.id === sub?.id_area);
-  const p = Store.personas().find(x => x.id === inc.persona_id);
-  const canal = Store.canales().find(c => c.id === inc.id_canal);
-  const est = ESTADOS[inc.id_estado] || ESTADOS.SIN_ASIGNAR;
-
-  $('detalleRef').textContent = inc.nro_referencia || nroRef(inc.id);
-  $('detalleTipo').textContent = (tipo?.nombre || '—') + ' · ' + (area?.nombre || '—');
+  let inc;
+  try { inc = await ApiInc.detalle(id); } catch (e) { showToast('Error cargando detalle: ' + e.message, 'err'); return; }
+  const est = ESTADOS[inc.estado_nombre] || ESTADOS.SIN_ASIGNAR;
+  $('detalleRef').textContent = inc.nro_referencia || id;
+  $('detalleTipo').textContent = (inc.tipo_nombre || '—') + ' · ' + (inc.area_nombre || '—');
   $('detalleEstadoChip').className = 'est-chip ' + est.cls;
   $('detalleEstadoChip').textContent = est.label;
-  $('detalleSlaChip').innerHTML = slaChip(inc);
-  $('detalleCategBadge').className = 'cat-badge cat--' + (tipo?.categoria || 'consulta').toLowerCase();
-  $('detalleCategBadge').textContent = tipo?.categoria || '—';
-
-  // Botones según rol y estado
-  const colab = Auth.esColab(), admin = Auth.esAdmin(), terminal = est.terminal;
+  $('detalleSlaChip').innerHTML = slaChipFromApi(inc);
+  $('detalleCategBadge').className = 'cat-badge cat--' + (inc.categoria || 'consulta').toLowerCase();
+  $('detalleCategBadge').textContent = inc.categoria || '—';
+  const colab = Auth.esColab(), terminal = inc.es_terminal;
   $('btnCambiarEstado').hidden = !colab || terminal;
-  $('btnCrearOT').hidden = !colab || terminal || tipo?.categoria === 'CONSULTA';
+  $('btnCrearOT').hidden = !colab || terminal || inc.categoria === 'CONSULTA';
   $('btnCrearHijo').hidden = !colab || terminal;
   $('btnAgregarNota').hidden = !colab;
-
-  // Grid datos
   $('detalleGrid').innerHTML = `
-    <div class="detail-item"><div class="detail-label">Ciudadano</div><div class="detail-value">${p ? p.apellido + ', ' + p.nombre : '—'}</div></div>
-    <div class="detail-item"><div class="detail-label">DNI</div><div class="detail-value">${p ? p.tipo_doc + ' ' + p.nro_doc : '—'}</div></div>
-    <div class="detail-item"><div class="detail-label">Canal</div><div class="detail-value">${canal?.nombre || '—'}</div></div>
-    <div class="detail-item"><div class="detail-label">Sub-área</div><div class="detail-value">${sub?.nombre || '—'}</div></div>
-    <div class="detail-item"><div class="detail-label">Creado por</div><div class="detail-value">${inc.id_usuario_creador || '—'}</div></div>
+    <div class="detail-item"><div class="detail-label">Ciudadano</div><div class="detail-value">${inc.ciudadano || '—'}</div></div>
+    <div class="detail-item"><div class="detail-label">Doc.</div><div class="detail-value">${inc.nro_doc || '—'}</div></div>
+    <div class="detail-item"><div class="detail-label">Canal</div><div class="detail-value">${inc.canal_nombre || '—'}</div></div>
+    <div class="detail-item"><div class="detail-label">Sub-área</div><div class="detail-value">${inc.subarea_nombre || '—'}</div></div>
+    <div class="detail-item"><div class="detail-label">Creado por</div><div class="detail-value">${inc.creador_nombre || '—'}</div></div>
     <div class="detail-item"><div class="detail-label">Fecha apertura</div><div class="detail-value">${fmt(inc.created_at)}</div></div>
     ${inc.fecha_limite_sla ? `<div class="detail-item"><div class="detail-label">Límite SLA</div><div class="detail-value">${fmt(inc.fecha_limite_sla)}</div></div>` : ''}
     ${inc.ubicacion_calle ? `<div class="detail-item"><div class="detail-label">Ubicación</div><div class="detail-value">${inc.ubicacion_calle}${inc.ubicacion_altura ? ' ' + inc.ubicacion_altura : ''}</div></div>` : ''}`;
-
   $('detalleDesc').textContent = inc.descripcion || '—';
-
-  // Padre / hijo
   const phEl = $('detallePadreHijo');
   if (inc.id_incidente_padre) {
-    phEl.innerHTML = `<div class="alert alert--warning">🔗 Incidente hijo de <strong>${nroRef(inc.id_incidente_padre)}</strong>. <button class="btn btn--outline btn--sm" onclick="abrirDetalle(${inc.id_incidente_padre})">Ver padre</button></div>`;
+    phEl.innerHTML = `<div class="alert alert--warning">🔗 Incidente hijo de <strong>${inc.id_incidente_padre}</strong>. <button class="btn btn--outline btn--sm" onclick="abrirDetalle(${inc.id_incidente_padre})">Ver padre</button></div>`;
     phEl.hidden = false;
-  } else {
-    const hijos = Store.incidentes().filter(i => i.id_incidente_padre === id);
-    if (hijos.length) {
-      phEl.innerHTML = `<div class="alert alert--info">🔗 Incidentes hijos: ${hijos.map(h => `<button class="btn btn--outline btn--sm" onclick="abrirDetalle(${h.id})">${nroRef(h.id)}</button>`).join(' ')}</div>`;
-      phEl.hidden = false;
-    } else { phEl.hidden = true; }
-  }
-
+  } else { phEl.hidden = true; }
   // OTs
-  const otsInc = Store.ots().filter(o => o.id_incidente === id);
   const otBody = $('tablaDetalleOTsBody'); otBody.innerHTML = '';
-  if (!otsInc.length) {
-    otBody.innerHTML = '<tr><td colspan="5" class="empty-td">Sin órdenes de trabajo.</td></tr>';
+  const ots = inc.ordenes_trabajo || [];
+  if (!ots.length) {
+    otBody.innerHTML = '<tr><td colspan="6" class="empty-td">Sin órdenes de trabajo.</td></tr>';
   } else {
-    otsInc.forEach(ot => {
-      const sa = Store.subareas().find(s => s.id === ot.id_subarea);
-      const stCls = { PENDIENTE: 'ot-pend', EN_PROCESO: 'ot-proc', COMPLETADA: 'ot-comp', CANCELADA: 'ot-canc' }[ot.estado] || '';
+    ots.forEach(ot => {
+      const stCls = { PENDIENTE:'ot-pend', EN_PROCESO:'ot-proc', COMPLETADA:'ot-comp', CANCELADA:'ot-canc' }[ot.estado] || '';
+      const activa = ot.estado === 'EN_PROCESO' || ot.estado === 'PENDIENTE';
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td style="font-family:var(--mono)">OT-${String(ot.id).padStart(4, '0')}</td>
-        <td>${sa?.nombre || '—'}</td><td>${ot.id_usuario || '—'}</td>
+      tr.innerHTML = `<td style="font-family:var(--mono)">OT-${String(ot.id).padStart(4,'0')}</td>
+        <td>${ot.subarea_nombre || '—'}</td><td>${ot.agente_nombre || '—'}</td>
         <td><span class="${stCls}">${ot.estado}</span></td>
-        <td>${ot.estado === 'PENDIENTE' || ot.estado === 'EN_PROCESO' ? `<button class="btn btn--outline btn--sm" data-completar-ot="${ot.id}">✓ Completar</button>` : '—'}</td>`;
+        <td style="font-size:.77rem">${ot.descripcion ? ot.descripcion.slice(0,40) : '—'}</td>
+        <td>${activa ? `<button class="btn btn--outline btn--sm" data-completar-ot="${ot.id}">✓ Completar</button>` : '—'}</td>`;
       otBody.appendChild(tr);
     });
     otBody.querySelectorAll('[data-completar-ot]').forEach(b => b.addEventListener('click', () => completarOT(+b.dataset.completarOt)));
   }
-
   // Timeline
-  const obs = Store.obs().filter(o => o.id_incidente === id).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  const obs = inc.observaciones || [];
   $('timelineContainer').innerHTML = obs.map(o => {
     const dotCls = ICONOS_TL_CLS[o.tipo] || 'tl-nota';
     const icono = ICONOS_TL[o.tipo] || '●';
-    const cambio = (o.estado_anterior && o.estado_nuevo) ? `<br><small>${ESTADOS[o.estado_anterior]?.label || o.estado_anterior} → ${ESTADOS[o.estado_nuevo]?.label || o.estado_nuevo}</small>` : '';
-    return `<div class="timeline-item">
-      <div class="timeline-dot ${dotCls}">${icono}</div>
+    const cambio = (o.est_anterior_nombre && o.est_nuevo_nombre) ? `<br><small>${ESTADOS[o.est_anterior_nombre]?.label || o.est_anterior_nombre} → ${ESTADOS[o.est_nuevo_nombre]?.label || o.est_nuevo_nombre}</small>` : '';
+    return `<div class="timeline-item"><div class="timeline-dot ${dotCls}">${icono}</div>
       <div class="timeline-content">
-        <div class="timeline-meta">${fmt(o.created_at)} · ${o.usuario || 'sistema'}</div>
-        <div class="timeline-texto">${o.texto || '—'}${cambio}</div>
-      </div></div>`;
+        <div class="timeline-meta">${fmt(o.created_at)} · ${o.usuario_nombre || 'sistema'}</div>
+        <div class="timeline-texto">${o.texto || '—'}${cambio}</div></div></div>`;
   }).join('');
-
   $('modalDetalle').hidden = false;
 }
 
@@ -815,13 +782,15 @@ function initDetalle() {
   $('btnCrearCita')?.addEventListener('click', abrirNuevaCita);
 }
 
-function guardarNota() {
+async function guardarNota() {
   const texto = $('textoNota').value.trim(); const err = $('notaError');
   if (!texto) { err.textContent = 'La nota no puede estar vacía.'; err.hidden = false; return; }
-  Store.addObs({ id_incidente: _detalleId, usuario: Auth.get().email, tipo: 'NOTA', texto, created_at: new Date().toISOString() });
-  $('modalNota').hidden = true;
-  abrirDetalle(_detalleId);
-  showToast('Nota agregada', 'ok');
+  try {
+    await ApiInc.nota(_detalleId, texto);
+    $('modalNota').hidden = true;
+    await abrirDetalle(_detalleId);
+    showToast('Nota agregada', 'ok');
+  } catch (e) { err.textContent = e.message; err.hidden = false; }
 }
 
 // ── CAMBIAR ESTADO ────────────────────────────────────────────
@@ -843,16 +812,17 @@ function abrirCambiarEstado() {
 function initCambiarEstado() {
   $('btnCerrarCambioEstadoX').addEventListener('click', () => $('modalCambiarEstado').hidden = true);
   $('btnCancelarCambioEstado').addEventListener('click', () => $('modalCambiarEstado').hidden = true);
-  $('btnConfirmarCambioEstado').addEventListener('click', () => {
+  $('btnConfirmarCambioEstado').addEventListener('click', async () => {
     const nuevoEstado = $('nuevoEstadoSel').value;
     const motivo = $('motivoCambioEstado').value.trim();
     const err = $('cambioEstadoError');
     if (!motivo) { err.textContent = 'El motivo es obligatorio.'; err.hidden = false; return; }
-    const result = MaquinaEstados.cambiarEstado(_detalleId, nuevoEstado, motivo, Auth.get().email);
-    if (!result.ok) { err.textContent = result.motivo; err.hidden = false; return; }
-    $('modalCambiarEstado').hidden = true;
-    abrirDetalle(_detalleId); renderBandeja();
-    showToast('Estado actualizado a: ' + ESTADOS[nuevoEstado]?.label, 'ok');
+    try {
+      await ApiInc.cambiarEstado(_detalleId, { nuevo_estado: nuevoEstado, motivo });
+      $('modalCambiarEstado').hidden = true;
+      await abrirDetalle(_detalleId); renderBandeja();
+      showToast('Estado actualizado a: ' + (ESTADOS[nuevoEstado]?.label || nuevoEstado), 'ok');
+    } catch (e) { err.textContent = e.message; err.hidden = false; }
   });
 }
 
@@ -876,41 +846,44 @@ function initNuevaOT() {
   // Cascada área → sub-área → técnico
   $('otAreaGestion').addEventListener('change', () => popularSubareasGestionOT($('otAreaGestion').value));
   $('otSubAreaGestion').addEventListener('change', () => popularTecnicosOT($('otSubAreaGestion').value));
-  $('btnConfirmarNuevaOT').addEventListener('click', () => {
+  $('btnConfirmarNuevaOT').addEventListener('click', async () => {
     const subId = +$('otSubAreaGestion').value;
     const tecId = +$('otTecnico').value;
-    const desc = $('otDescripcion').value.trim();
-    const err = $('otError');
+    const desc  = $('otDescripcion').value.trim();
+    const err   = $('otError');
     if (!subId) { err.textContent = 'Seleccione sub-área de gestión.'; err.hidden = false; return; }
     if (!tecId) { err.textContent = 'Debe asignar un técnico.'; err.hidden = false; return; }
-    const result = MaquinaEstados.crearOT(_detalleId, subId, tecId, desc, Auth.get().email);
-    if (!result.ok) { err.textContent = result.motivo; err.hidden = false; return; }
-    $('modalNuevaOT').hidden = true;
-    abrirDetalle(_detalleId); renderBandeja();
-    showToast('🔧 OT creada. Incidente pasó a ASIGNADO.', 'ok');
+    try {
+      await ApiOT.crear({ id_incidente: _detalleId, id_subarea: subId, id_usuario: tecId, descripcion: desc });
+      $('modalNuevaOT').hidden = true;
+      await abrirDetalle(_detalleId); renderBandeja();
+      showToast('🔧 OT creada. Incidente pasó a EN_PROCESO.', 'ok');
+    } catch (e) { err.textContent = e.message; err.hidden = false; }
   });
   // Modal cancelar OT
   $('btnCerrarCancelarOTX').addEventListener('click', () => $('modalCancelarOT').hidden = true);
   $('btnCerrarCancelarOT').addEventListener('click', () => $('modalCancelarOT').hidden = true);
-  $('btnConfirmarCancelarOT').addEventListener('click', () => {
+  $('btnConfirmarCancelarOT').addEventListener('click', async () => {
     const motivo = $('motivoCancelarOT').value.trim();
     const err = $('cancelarOTError');
     if (!motivo) { err.textContent = 'El motivo es obligatorio.'; err.hidden = false; return; }
-    const result = MaquinaEstados.cancelarOT(_cancelOTId, motivo, Auth.get().email);
-    if (!result.ok) { err.textContent = result.motivo; err.hidden = false; return; }
-    $('modalCancelarOT').hidden = true;
-    if (_detalleId) abrirDetalle(_detalleId);
-    renderBandeja(); renderOrdenes();
-    showToast('❌ OT cancelada. Incidente vuelve a PENDIENTE.', 'warn');
+    try {
+      await ApiOT.cancelar(_cancelOTId, motivo);
+      $('modalCancelarOT').hidden = true;
+      if (_detalleId) await abrirDetalle(_detalleId);
+      renderBandeja(); renderOrdenes();
+      showToast('❌ OT cancelada. Incidente vuelve a SIN_ASIGNAR.', 'warn');
+    } catch (e) { err.textContent = e.message; err.hidden = false; }
   });
 }
-function completarOT(otId) {
-  if (!confirm('¿Marcar esta OT como COMPLETADA? El incidente pasará a CUMPLIDO.')) return;
-  const result = MaquinaEstados.completarOT(otId, Auth.get().email);
-  if (!result.ok) { showToast(result.motivo, 'err'); return; }
-  if (_detalleId) abrirDetalle(_detalleId);
-  renderBandeja(); renderOrdenes();
-  showToast('✅ OT completada. Incidente → CUMPLIDO.', 'ok');
+async function completarOT(otId) {
+  if (!confirm('¿Marcar esta OT como COMPLETADA? El incidente pasará a RESUELTO.')) return;
+  try {
+    await ApiOT.completar(otId, null);
+    if (_detalleId) await abrirDetalle(_detalleId);
+    renderBandeja(); renderOrdenes();
+    showToast('✅ OT completada. Incidente → RESUELTO.', 'ok');
+  } catch (e) { showToast(e.message, 'err'); }
 }
 function abrirCancelarOT(otId) {
   _cancelOTId = otId;
@@ -921,8 +894,57 @@ function abrirCancelarOT(otId) {
   $('modalCancelarOT').hidden = false;
 }
 
-// ── ÓRDENES DE TRABAJO ──────────────────────────────────────────
-function renderOrdenes() {
+async function renderOrdenes() {
+  const estado   = $('otFiltroEstado')?.value   || '';
+  const subareaG = $('otFiltroSubarea')?.value   || '';
+  const agente   = $('otFiltroTecnico')?.value   || '';
+  const desde    = $('otFiltroDesde')?.value      || '';
+  const hasta    = $('otFiltroHasta')?.value      || '';
+  const buscar   = ($('otFiltroBuscar')?.value   || '').toLowerCase();
+  const tbody = $('tablaOrdenesBody');
+  tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:1.5rem">⏳ Cargando…</td></tr>';
+  let data;
+  try {
+    data = await ApiOT.lista({ estado, subarea_id: subareaG, agente_id: agente, desde, hasta });
+  } catch (e) { showToast('Error OTs: ' + e.message, 'err'); return; }
+  if (buscar) data = data.filter(o =>
+    ('OT-' + String(o.id).padStart(4,'0')).toLowerCase().includes(buscar) ||
+    (o.nro_referencia || '').toLowerCase().includes(buscar)
+  );
+  tbody.innerHTML = '';
+  $('ordenesVacio').hidden = data.length > 0;
+  data.forEach(ot => {
+    const stCls = { EN_PROCESO:'ot-proc', COMPLETADA:'ot-comp', CANCELADA:'ot-canc', PENDIENTE:'ot-pend' }[ot.estado] || '';
+    const activa = ot.estado === 'EN_PROCESO' || ot.estado === 'PENDIENTE';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td style="font-family:var(--mono)">OT-${String(ot.id).padStart(4,'0')}</td>
+      <td><button class="btn btn--outline btn--sm" onclick="abrirDetalle(${ot.id_incidente})">${ot.nro_referencia || ot.id_incidente}</button></td>
+      <td>${ot.ciudadano_nombre || '—'}</td>
+      <td>${ot.area_nombre || '—'}<br><small style="color:var(--text3)">${ot.subarea_nombre || '—'}</small></td>
+      <td>${ot.agente_nombre || '—'}</td>
+      <td style="font-size:.77rem">${ot.descripcion ? ot.descripcion.slice(0,40) + '…' : '—'}</td>
+      <td><span class="${stCls}">${ot.estado.replace('_',' ')}</span></td>
+      <td style="font-size:.78rem">${fmtFecha(ot.created_at)}</td>
+      <td style="display:flex;gap:.3rem;flex-wrap:wrap">
+        <button class="btn btn--outline btn--sm" onclick="abrirDetalle(${ot.id_incidente})">Ver Inc.</button>
+        ${activa ? `<button class="btn btn--primary btn--sm" data-comp-ot="${ot.id}">✓ Completar</button>` : ''}
+        ${activa ? `<button class="btn btn--danger btn--sm" data-canc-ot="${ot.id}">✕ Cancelar</button>` : ''}
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll('[data-comp-ot]').forEach(b => b.addEventListener('click', () => { completarOT(+b.dataset.compOt); }));
+  tbody.querySelectorAll('[data-canc-ot]').forEach(b => b.addEventListener('click', () => abrirCancelarOT(+b.dataset.cancOt)));
+  ['otFiltroEstado','otFiltroAreaGestion','otFiltroSubarea','otFiltroTecnico','otFiltroDesde','otFiltroHasta'].forEach(id => { if ($(id)) $(id).onchange = renderOrdenes; });
+  if ($('otFiltroBuscar')) $('otFiltroBuscar').oninput = renderOrdenes;
+  if ($('btnLimpiarFiltrosOT')) $('btnLimpiarFiltrosOT').onclick = () => {
+    ['otFiltroEstado','otFiltroAreaGestion','otFiltroSubarea','otFiltroTecnico','otFiltroDesde','otFiltroHasta','otFiltroBuscar'].forEach(id => { if ($(id)) $(id).value = ''; });
+    renderOrdenes();
+  };
+  if ($('btnExportarOT')) $('btnExportarOT').onclick = () => {
+    const rows = data.map(o => ({ OT: 'OT-' + String(o.id).padStart(4,'0'), Incidente: o.nro_referencia, Area: o.area_nombre, Subarea: o.subarea_nombre, Agente: o.agente_nombre, Estado: o.estado, Fecha: fmtFecha(o.created_at) }));
+    exportarXLS(rows, 'Ordenes_Trabajo');
+  };
+}
   const estado = $('otFiltroEstado')?.value || '';
   const areaG = +($('otFiltroAreaGestion')?.value || 0);
   const subareaG = +($('otFiltroSubarea')?.value || 0);
@@ -972,71 +994,31 @@ function renderOrdenes() {
   tbody.querySelectorAll('[data-canc-ot]').forEach(b => b.addEventListener('click', () => abrirCancelarOT(+b.dataset.cancOt)));
   // Filtros
   ['otFiltroEstado', 'otFiltroAreaGestion', 'otFiltroSubarea', 'otFiltroTecnico', 'otFiltroDesde', 'otFiltroHasta'].forEach(id => { if ($(id)) $(id).onchange = renderOrdenes; });
-  if ($('otFiltroBuscar')) $('otFiltroBuscar').oninput = renderOrdenes;
-  if ($('btnLimpiarFiltrosOT')) $('btnLimpiarFiltrosOT').onclick = () => {
-    ['otFiltroEstado', 'otFiltroAreaGestion', 'otFiltroSubarea', 'otFiltroTecnico', 'otFiltroDesde', 'otFiltroHasta', 'otFiltroBuscar'].forEach(id => { if ($(id)) $(id).value = ''; });
-    renderOrdenes();
-  };
-  // Cascada área → sub-área en filtro OT
-  if ($('otFiltroAreaGestion')) $('otFiltroAreaGestion').onchange = () => {
-    const ag = $('otFiltroAreaGestion').value;
-    const sel = $('otFiltroSubarea'); if (!sel) return;
-    const p0 = sel.options[0]; sel.innerHTML = ''; sel.appendChild(p0);
-    Store.subareasG().filter(s => (!ag || s.id_area_gestion === +ag) && s.activo).forEach(s => { const o = document.createElement('option'); o.value = s.id; o.textContent = s.nombre; sel.appendChild(o); });
-    renderOrdenes();
-  };
-  if ($('btnExportarOT')) $('btnExportarOT').onclick = () => {
-    const rows = data.map(ot => {
-      const inc = Store.incidentes().find(i => i.id === ot.id_incidente);
-      const p = Store.personas().find(x => x.id === inc?.persona_id);
-      const sg = Store.subareasG().find(s => s.id === ot.id_subarea_gestion);
-      const t = Store.tecnicos().find(x => x.id === ot.id_tecnico);
-      return { OT: 'OT-' + String(ot.id).padStart(4, '0'), Incidente: inc?.nro_referencia || nroRef(ot.id_incidente), Ciudadano: p ? p.apellido + ' ' + p.nombre : '—', Subarea: sg?.nombre || '—', Tecnico: t ? t.apellido + ' ' + t.nombre : '—', Estado: ot.estado, Fecha: fmtFecha(ot.created_at) };
-    });
-    exportarXLS(rows, 'Ordenes_Trabajo');
-  };
-}
 
-// ── TABLERO (actualizado con nombres de estados nuevos) ────────────────────
-function renderTablero() {
-  const incs = Store.incidentes();
-  const ots = Store.ots();
-  const total = incs.length;
-  const abiertos = incs.filter(i => !ESTADOS[i.id_estado]?.terminal).length;
-  const vencidos = incs.filter(i => i.fecha_limite_sla && new Date(i.fecha_limite_sla) < new Date() && !ESTADOS[i.id_estado]?.terminal).length;
-  const resueltos = incs.filter(i => i.id_estado === 'RESUELTO').length;
-  const otsPend = ots.filter(o => o.estado === 'PENDIENTE' || o.estado === 'EN_PROCESO').length;
 
+async function renderTablero() {
+  let resumen, filas;
+  try {
+    [resumen, filas] = await Promise.all([ApiTablero.resumen(), ApiTablero.filas()]);
+  } catch (e) { showToast('Error tablero: ' + e.message, 'err'); return; }
   $('kpiContainer').innerHTML = `
-    <div class="kpi-card"><div class="kpi-value">${total}</div><div class="kpi-label">Total incidentes</div></div>
-    <div class="kpi-card"><div class="kpi-value" style="color:var(--accent)">${abiertos}</div><div class="kpi-label">Incidentes abiertos</div></div>
-    <div class="kpi-card"><div class="kpi-value" style="color:var(--danger)">${vencidos}</div><div class="kpi-label">SLA Vencidos</div></div>
-    <div class="kpi-card"><div class="kpi-value" style="color:var(--success)">${resueltos}</div><div class="kpi-label">Resueltos</div></div>
-    <div class="kpi-card"><div class="kpi-value" style="color:var(--warning)">${otsPend}</div><div class="kpi-label">OT pendientes</div></div>`;
-
-  // Tabla por área/estado
-  const mapa = {};
-  incs.forEach(i => {
-    const t = Store.tipos().find(x => x.id === i.id_tipo);
-    const s = Store.subareas().find(x => x.id === t?.id_subarea);
-    const a = Store.areas().find(x => x.id === s?.id_area);
-    const key = (a?.nombre || 'Sin área') + '|' + i.id_estado + '|' + (t?.categoria || '—');
-    if (!mapa[key]) mapa[key] = { area: a?.nombre || 'Sin área', estado: i.id_estado, categ: t?.categoria || '—', total: 0, slaVenc: 0 };
-    mapa[key].total++;
-    if (i.fecha_limite_sla && new Date(i.fecha_limite_sla) < new Date() && !ESTADOS[i.id_estado]?.terminal) mapa[key].slaVenc++;
-  });
+    <div class="kpi-card"><div class="kpi-value">${resumen.total_abiertos}</div><div class="kpi-label">Incidentes abiertos</div></div>
+    <div class="kpi-card"><div class="kpi-value" style="color:var(--accent)">${resumen.sin_asignar}</div><div class="kpi-label">Sin asignar</div></div>
+    <div class="kpi-card"><div class="kpi-value" style="color:var(--danger)">${resumen.sla_vencidos}</div><div class="kpi-label">SLA Vencidos</div></div>
+    <div class="kpi-card"><div class="kpi-value" style="color:var(--success)">${resumen.resueltos_hoy}</div><div class="kpi-label">Resueltos hoy</div></div>`;
   const tbody = $('tablaTableroBody'); tbody.innerHTML = '';
-  Object.values(mapa).sort((a, b) => a.area.localeCompare(b.area)).forEach(r => {
-    const est = ESTADOS[r.estado] || ESTADOS.SIN_ASIGNAR;
+  filas.forEach(r => {
+    const est = Object.values(ESTADOS).find(e => e.label.toUpperCase().replace(/ /g,'_') === r.estado) || { cls:'', label: r.estado };
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.area}</td><td><span class="est-chip ${est.cls}">${est.label}</span></td>
-      <td><span class="cat-badge cat--${r.categ.toLowerCase()}">${r.categ}</span></td>
+    tr.innerHTML = `<td>${r.area}</td><td><span class="est-chip ${est.cls}">${est.label || r.estado}</span></td>
+      <td><span class="cat-badge cat--${(r.categoria||'').toLowerCase()}">${r.categoria}</span></td>
       <td><strong>${r.total}</strong></td>
-      <td>${r.slaVenc ? `<span style="color:var(--danger);font-weight:700">${r.slaVenc}</span>` : '—'}</td>`;
+      <td>${r.sla_vencidos ? `<span style="color:var(--danger);font-weight:700">${r.sla_vencidos}</span>` : '—'}</td>`;
     tbody.appendChild(tr);
   });
   $('btnRefreshTablero').onclick = renderTablero;
 }
+
 
 // ── ADMIN MAESTROS ────────────────────────────────────────────
 let _editAreaId = null, _editTipoId = null;
@@ -1059,10 +1041,14 @@ function initAdmin() {
   $('btnNuevaArea').addEventListener('click', () => { _editAreaId = null; $('areaNombre').value = ''; $('areaDesc').value = ''; $('areaClave').value = ''; $('areaError').hidden = true; $('modalAreaTitle').textContent = 'Nueva Área'; $('modalArea').hidden = false; });
   $('btnCerrarAreaX').addEventListener('click', () => $('modalArea').hidden = true);
   $('btnCancelarArea').addEventListener('click', () => $('modalArea').hidden = true);
-  $('btnGuardarArea').addEventListener('click', () => {
+  $('btnGuardarArea').addEventListener('click', async () => {
     const n = $('areaNombre').value.trim(); if (!n) { $('areaError').textContent = 'Nombre requerido.'; $('areaError').hidden = false; return; }
-    Store.saveArea({ id: _editAreaId || undefined, nombre: n, descripcion: $('areaDesc').value.trim(), palabras_clave: $('areaClave').value.trim(), activo: true, created_at: new Date().toISOString() });
-    $('modalArea').hidden = true; popularFiltros(); renderAdminAreas(); showToast('Área guardada', 'ok');
+    try {
+      const body = { nombre: n, descripcion: $('areaDesc').value.trim(), palabras_clave: $('areaClave').value.trim(), activo: true };
+      if (_editAreaId) await ApiMaestros.editarArea(_editAreaId, body); else await ApiMaestros.crearArea(body);
+      await cargarMaestros(); popularFiltros();
+      $('modalArea').hidden = true; renderAdminAreas(); showToast('Área guardada', 'ok');
+    } catch (e) { $('areaError').textContent = e.message; $('areaError').hidden = false; }
   });
   // Tipo
   $('btnNuevoTipo').addEventListener('click', () => { _editTipoId = null; $('tipoNombre').value = ''; $('tipoSla').value = 48; $('tipoError').hidden = true; $('modalTipoTitle').textContent = 'Nuevo Tipo'; popularFiltros(); $('modalTipo').hidden = false; });
@@ -1070,26 +1056,28 @@ function initAdmin() {
   $('btnCancelarTipo').addEventListener('click', () => $('modalTipo').hidden = true);
   $('tipoArea')?.addEventListener('change', () => { popularSubareas($('tipoArea').value, 'tipoSubArea'); });
   $('tipoCategoria')?.addEventListener('change', () => { $('tipoSlaGroup').hidden = $('tipoCategoria').value === 'CONSULTA'; });
-  $('btnGuardarTipo').addEventListener('click', () => {
+  $('btnGuardarTipo').addEventListener('click', async () => {
     const n = $('tipoNombre').value.trim(), sub = +$('tipoSubArea').value, cat = $('tipoCategoria').value;
     const err = $('tipoError');
     if (!n || !sub) { err.textContent = 'Nombre y sub-área requeridos.'; err.hidden = false; return; }
-    Store.saveTipo({ id: _editTipoId || undefined, id_subarea: sub, nombre: n, categoria: cat, sla_horas: cat === 'CONSULTA' ? 0 : +$('tipoSla').value, activo: true, created_at: new Date().toISOString() });
-    $('modalTipo').hidden = true; renderAdminTipos(); showToast('Tipo guardado', 'ok');
+    try {
+      const body = { id_subarea: sub, nombre: n, categoria: cat, sla_horas: cat === 'CONSULTA' ? 0 : +$('tipoSla').value, activo: true };
+      if (_editTipoId) await ApiMaestros.editarTipo(_editTipoId, body); else await ApiMaestros.crearTipo(body);
+      $('modalTipo').hidden = true; renderAdminTipos(); showToast('Tipo guardado', 'ok');
+    } catch (e) { err.textContent = e.message; err.hidden = false; }
   });
   // Canal
-  $('btnNuevoCanal').addEventListener('click', () => {
+  $('btnNuevoCanal').addEventListener('click', async () => {
     const nombre = prompt('Nombre del nuevo canal:'); if (!nombre?.trim()) return;
-    Store.saveCanal({ nombre: nombre.trim(), activo: true, created_at: new Date().toISOString() });
-    renderAdminCanales(); showToast('Canal creado', 'ok');
+    try { await ApiMaestros.crearCanal({ nombre: nombre.trim(), activo: true }); await cargarMaestros(); renderAdminCanales(); showToast('Canal creado', 'ok'); }
+    catch (e) { showToast('Error: ' + e.message, 'err'); }
   });
 }
 
 function renderAdminAreas() {
-  $(adminAreas).style.display = 'block';
   const tbody = $('tablaAreasBody'); tbody.innerHTML = '';
-  Store.areas().forEach(a => {
-    const subs = Store.subareas().filter(s => s.id_area === a.id);
+  _cache.areas.forEach(a => {
+    const subs = _cache.subareas.filter(s => s.id_area === a.id);
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${a.nombre}</td><td style="font-size:.76rem;color:var(--text3)">${a.palabras_clave || '—'}</td>
       <td>${subs.map(s => `<span class="cat-badge cat--consulta" style="margin:.1rem">${s.nombre}</span>`).join('') || '—'}</td>
@@ -1098,19 +1086,19 @@ function renderAdminAreas() {
     tbody.appendChild(tr);
   });
   tbody.querySelectorAll('[data-edit-area]').forEach(b => b.addEventListener('click', () => {
-    const a = Store.areas().find(x => x.id === +b.dataset.editArea); if (!a) return;
+    const a = _cache.areas.find(x => x.id === +b.dataset.editArea); if (!a) return;
     _editAreaId = a.id; $('areaNombre').value = a.nombre; $('areaDesc').value = a.descripcion || ''; $('areaClave').value = a.palabras_clave || '';
     $('modalAreaTitle').textContent = 'Editar Área'; $('areaError').hidden = true; $('modalArea').hidden = false;
   }));
 }
 
+
 function renderAdminTipos() {
   const tbody = $('tablaTiposBody'); tbody.innerHTML = '';
-  Store.tipos().forEach(t => {
-    const s = Store.subareas().find(x => x.id === t.id_subarea);
-    const a = Store.areas().find(x => x.id === s?.id_area);
+  _cache.tipos.forEach(t => {
+    const sub = _cache.subareas.find(x => x.id === t.id_subarea);
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${t.nombre}</td><td>${a?.nombre || '—'} › ${s?.nombre || '—'}</td>
+    tr.innerHTML = `<td>${t.nombre}</td><td>${sub?.area_nombre || '—'} › ${sub?.nombre || '—'}</td>
       <td><span class="cat-badge cat--${t.categoria.toLowerCase()}">${t.categoria}</span></td>
       <td>${t.sla_horas || '—'}</td>
       <td>${t.activo ? '<span class="est-chip est--resuelto">Activo</span>' : '<span class="est-chip est--cancelado">Inactivo</span>'}</td>
@@ -1119,16 +1107,22 @@ function renderAdminTipos() {
   });
 }
 
+
 function renderAdminCanales() {
   const tbody = $('tablaCanalesBody'); tbody.innerHTML = '';
-  Store.canales().forEach(c => {
+  _cache.canales.forEach(c => {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${c.nombre}</td>
       <td>${c.activo ? '<span class="est-chip est--resuelto">Activo</span>' : '<span class="est-chip est--cancelado">Inactivo</span>'}</td>
-      <td><button class="btn btn--danger btn--sm" onclick="Store.saveCanal({...Store.canales().find(x=>x.id===${c.id}),activo:false});renderAdminCanales()">⊘ Baja</button></td>`;
+      <td><button class="btn btn--danger btn--sm" data-baja-canal="${c.id}">⊘ Baja</button></td>`;
     tbody.appendChild(tr);
   });
+  tbody.querySelectorAll('[data-baja-canal]').forEach(b => b.addEventListener('click', async () => {
+    try { await ApiMaestros.editarCanal(+b.dataset.bajaCanal, { activo: false }); await cargarMaestros(); renderAdminCanales(); showToast('Canal dado de baja', 'warn'); }
+    catch (e) { showToast('Error: ' + e.message, 'err'); }
+  }));
 }
+
 
 function renderAdminAgentes() {
   const tbody = $('tablaAgentesBody'); tbody.innerHTML = '';
