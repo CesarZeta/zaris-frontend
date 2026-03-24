@@ -18,44 +18,6 @@
 <body>
 
     <!-- ══════════════════════════════════════════
-     LOGIN OVERLAY  (mismo diseño que index.html)
-══════════════════════════════════════════ -->
-    <div id="loginOverlay" class="login-overlay" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
-        <div class="login-box">
-            <div class="login-logo-wrap">
-                <img src="Images/LOGO_ZARIS.gif" alt="Logo ZARIS" class="login-logo-img" />
-            </div>
-            <p class="login-subtitle">Agenda — Turnos, Eventos y Espacios</p>
-
-            <div id="panelLoginForm">
-                <form id="formLogin" class="login-form" novalidate autocomplete="on">
-                    <div class="form-group">
-                        <label class="form-label" for="login_email">Usuario (correo electrónico)</label>
-                        <input type="email" id="login_email" class="form-control" required
-                            placeholder="usuario@municipio.gob.ar" autocomplete="username" />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="login_pass">Contraseña</label>
-                        <div class="pass-wrap">
-                            <input type="password" id="login_pass" class="form-control" required placeholder="••••••••"
-                                autocomplete="current-password" />
-                            <button type="button" class="btn-show-pass" id="btnShowPass" title="Mostrar contraseña"
-                                aria-label="Mostrar contraseña">👁</button>
-                        </div>
-                    </div>
-                    <div id="loginError" class="alert alert--error" role="alert" hidden></div>
-                    <button type="submit" id="btnLogin" class="btn btn--primary btn--full">Ingresar</button>
-                    <div class="login-links">
-                        <a href="home.html" class="link-btn">← Volver al inicio ZARIS</a>
-                    </div>
-                </form>
-            </div>
-
-            <p class="login-note">ZARIS v2.0 · Uso interno · © 2026</p>
-        </div>
-    </div>
-
-    <!-- ══════════════════════════════════════════
      CABECERA
 ══════════════════════════════════════════ -->
     <header class="app-header" role="banner">

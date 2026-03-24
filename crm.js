@@ -5,11 +5,11 @@
 
 // ── Auth ─────────────────────────────────────────────────────
 const Auth = (() => {
-  const KEY = 'bds_usuario';
+  const KEY = 'zaris_session';
   const g = () => { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } };
   const s = u => localStorage.setItem(KEY, JSON.stringify(u));
-  const clr = () => { localStorage.removeItem(KEY); localStorage.removeItem('zaris_session'); };
-  const getToken = () => { try { const sess = JSON.parse(localStorage.getItem('zaris_session')); return sess?.access_token || null; } catch { return null; } };
+  const clr = () => { localStorage.removeItem(KEY); };
+  const getToken = () => { return g()?.token || null; };
   return {
     get: g, set: s, clear: clr, getToken,
     esAdmin: () => g()?.rol === 'ADMINISTRADOR',

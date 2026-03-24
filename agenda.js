@@ -7,24 +7,13 @@
 // AUTH — comparte KEY con home.html / index.html
 // ════════════════════════════════════════════════════════
 const Auth = (() => {
-    const KEY = 'bds_usuario';
-
-    const DEMO = {
-        'admin@zaris.local': { pass: 'Admin2026!', nombre: 'Administrador', rol: 'ADMINISTRADOR' },
-        'operador@zaris.local': { pass: 'Demo2026!', nombre: 'Colaborador Demo', rol: 'COLABORADOR' },
-        'consulta@zaris.local': { pass: 'Consulta26!', nombre: 'Consulta Demo', rol: 'CONSULTA' },
-    };
+    const KEY = 'zaris_session';
 
     function get() { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }
     function set(u) { localStorage.setItem(KEY, JSON.stringify(u)); }
     function clear() { localStorage.removeItem(KEY); }
     function ini(n) { return n.trim().split(/\s+/).map(p => p[0].toUpperCase()).slice(0, 2).join(''); }
-    function login(email, pass) {
-        const d = DEMO[email.toLowerCase()];
-        if (!d || d.pass !== pass) return null;
-        const u = { nombre: d.nombre, email: email.toLowerCase(), rol: d.rol, iniciales: ini(d.nombre), ts: Date.now() };
-        set(u); return u;
-    }
+    function login(email, pass) { return null; /* Obsoleto, SSO por zaris_session */ }
     function esAdmin() { return get()?.rol === 'ADMINISTRADOR'; }
     function esColab() { return ['ADMINISTRADOR', 'COLABORADOR'].includes(get()?.rol); }
     return { get, set, clear, ini, login, esAdmin, esColab };

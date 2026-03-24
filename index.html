@@ -16,64 +16,6 @@
 <body>
 
     <!-- ══════════════════════════════════════════════════════
-     LOGIN OVERLAY
-══════════════════════════════════════════════════════ -->
-    <div id="loginOverlay" class="login-overlay" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
-        <div class="login-box">
-            <div class="login-logo-wrap">
-                <img src="Images/LOGO_ZARIS.gif" alt="Logo ZARIS" class="login-logo-img" />
-            </div>
-            <p class="login-subtitle">Base Única de Personas</p>
-
-            <!-- PANEL: Inicio de sesión -->
-            <div id="panelLoginForm">
-                <form id="formLogin" class="login-form" novalidate autocomplete="on">
-                    <div class="form-group">
-                        <label class="form-label" for="login_email">Usuario (correo electrónico)</label>
-                        <input type="email" id="login_email" class="form-control" required
-                            placeholder="usuario@ejemplo.com" autocomplete="username" />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="login_pass">Contraseña</label>
-                        <div class="pass-wrap">
-                            <input type="password" id="login_pass" class="form-control" required placeholder="••••••••"
-                                autocomplete="current-password" />
-                            <button type="button" class="btn-show-pass" id="btnShowPass" title="Mostrar contraseña"
-                                aria-label="Mostrar contraseña">👁</button>
-                        </div>
-                    </div>
-                    <div id="loginError" class="alert alert--error" role="alert" hidden></div>
-                    <button type="submit" id="btnLogin" class="btn btn--primary btn--full">Ingresar</button>
-                    <div class="login-links">
-                        <button type="button" class="link-btn" id="btnIrRecuperar">¿Olvidaste tu contraseña?</button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- PANEL: Recuperar contraseña -->
-            <div id="panelRecuperar" hidden>
-                <p class="recover-desc">Ingresá tu correo electrónico y te enviaremos instrucciones para recuperar el
-                    acceso.</p>
-                <form id="formRecuperar" class="login-form" novalidate>
-                    <div class="form-group">
-                        <label class="form-label" for="rec_email">Correo electrónico registrado</label>
-                        <input type="email" id="rec_email" class="form-control" required
-                            placeholder="usuario@ejemplo.com" />
-                    </div>
-                    <div id="recError" class="alert alert--error" role="alert" hidden></div>
-                    <div id="recSuccess" class="alert alert--success" role="status" hidden></div>
-                    <button type="submit" class="btn btn--primary btn--full">Enviar instrucciones</button>
-                    <div class="login-links">
-                        <button type="button" class="link-btn" id="btnVolver">← Volver al inicio de sesión</button>
-                    </div>
-                </form>
-            </div>
-
-            <p class="login-note">ZARIS v2.0 · Uso interno · © 2026</p>
-        </div>
-    </div>
-
-    <!-- ══════════════════════════════════════════════════════
      CABECERA
 ══════════════════════════════════════════════════════ -->
     <!-- BARRA PRIMARIA: logo | módulos | usuario -->
