@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+env/
+venv/
+.venv/
+
+# Backend secrets
+backend/.env
+
+# IDE
+.vscode/
+.idea/
+
+# Agent (Antigravity)
+.agent/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Documentos técnicos (no deployar)
+*.docx
+ZARIS_REFERENCIA_PROYECTO.md
+
+# SQL scripts (no van al frontend)
+sql/
+
+# Deploy scripts
+deploy_to_supabase.py
+
+# Temp
+*.tmp
+*.log
