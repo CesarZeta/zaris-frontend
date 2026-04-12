@@ -320,6 +320,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const resultados = await ZUtils.apiFetch(
                 `/ciudadanos/buscar?q=${encodeURIComponent(query)}&tipo=${state.busquedaTipo}`
             );
+            if (resultados.length === 0 && state.busquedaTipo === 'texto') {
+                // Fallback: backend puede no tener el param 'tipo' — reintentar sin él
+                const fallback = await ZUtils.apiFetch(
+                    `/ciudadanos/buscar?q=${encodeURIComponent(query)}`
+                ).catch(() => []);
+                if (fallback.length > 0) {
+                    if (fallback.length === 1) mostrarResultadoUnico(fallback[0]);
+                    else mostrarListaResultados(fallback);
+                    return;
+                }
+            }
             if (resultados.length === 0) {
                 ZUtils.toast('No se encontró ningún ciudadano con esos datos.', 'info');
                 els.searchResult.classList.remove('visible');
@@ -443,18 +454,27 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('cid-email').value       = ciudadano.email        || '';
         document.getElementById('cid-observaciones').value = ciudadano.observaciones || '';
         els.obsCount.textContent = (ciudadano.observaciones || '').length;
-        document.getElementById('cid-dni-validado').checked    = !!ciudadano.ren_chk;
-        document.getElementById('cid-cuil-validado').checked   = !!ciudadano.cuil_chk;
+        document.getElementById('cid-dni-validado').checked     = !!ciudadano.ren_chk;
+        document.getElementById('cid-cuil-validado').checked    = !!ciudadano.cuil_chk;
         document.getElementById('cid-email-verificado').checked = !!ciudadano.email_chk;
+        // Checkbox representación de empresa
+        if (els.empChk) els.empChk.checked = !!ciudadano.emp_chk;
     }
 
     function setFormReadonly(readonly) {
+        // Excluir el checkbox de empresa (debe ser visible siempre en consulta/edición)
         els.formCiudadano.querySelectorAll('.z-input:not([type=hidden]), .z-select, .z-textarea').forEach(el => {
             el.readOnly = readonly;
             el.disabled = readonly;
             el.style.background = readonly ? '#F5F5F5' : '';
             el.style.cursor     = readonly ? 'not-allowed' : '';
         });
+        // Los checkboxes de validación batch ya son siempre disabled
+        // El checkbox emp_chk también debe verse, pero no editarse en modo consulta
+        if (els.empChk) {
+            els.empChk.disabled = readonly;
+            els.empChk.style.cursor = readonly ? 'not-allowed' : '';
+        }
         els.btnGuardar.style.display = readonly ? 'none' : '';
     }
     // ── Modo Edición ──
@@ -512,6 +532,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Observaciones
             document.getElementById('cid-observaciones').value = ciudadano.observaciones || '';
             els.obsCount.textContent = (ciudadano.observaciones || '').length;
+            // Checkboxes de validación batch y representación empresa
+            document.getElementById('cid-dni-validado').checked     = !!ciudadano.ren_chk;
+            document.getElementById('cid-cuil-validado').checked    = !!ciudadano.cuil_chk;
+            document.getElementById('cid-email-verificado').checked = !!ciudadano.email_chk;
+            if (els.empChk) els.empChk.checked = !!ciudadano.emp_chk;
         }
 
         setTimeout(() => els.formCard.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
