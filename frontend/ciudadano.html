@@ -177,10 +177,15 @@
                 <div class="z-search-panel__title">
                     🔍 Buscar Ciudadano Existente
                 </div>
+                <!-- Toggle tipo búsqueda -->
+                <div style="display:flex;gap:6px;margin-bottom:0.6rem;">
+                    <button type="button" class="z-btn z-btn--xs z-btn--primary" id="btn-modo-numero" title="Buscar por DNI o CUIL"># DNI / CUIL</button>
+                    <button type="button" class="z-btn z-btn--xs z-btn--ghost"   id="btn-modo-texto"  title="Buscar por nombre">Aa Nombre</button>
+                </div>
                 <div class="z-search-box">
                     <div class="z-form-group">
                         <input type="text" class="z-input" id="search-query"
-                               placeholder="Ingresá Nro. de Documento o Email..."
+                               placeholder="Ingresá Nro. de Documento o CUIL..."
                                autofocus>
                     </div>
                     <button class="z-btn z-btn--primary" id="btn-buscar">
@@ -194,9 +199,13 @@
                 <div class="z-search-result" id="search-result">
                     <div class="z-search-result__name" id="result-name"></div>
                     <div class="z-search-result__detail" id="result-detail"></div>
-                    <div style="margin-top: 10px; display: flex; gap: 8px;">
-                        <button class="z-btn z-btn--sm z-btn--primary" id="btn-editar-encontrado">
+                    <div id="result-list" style="margin-top:8px;"></div>
+                    <div style="margin-top: 10px; display: flex; gap: 8px;" id="result-actions">
+                        <button class="z-btn z-btn--sm z-btn--primary" id="btn-editar-encontrado" style="display:none;">
                             ✏️ Editar
+                        </button>
+                        <button class="z-btn z-btn--sm z-btn--ghost" id="btn-consultar-encontrado" style="display:none;">
+                            👁 Consultar
                         </button>
                         <button class="z-btn z-btn--sm z-btn--ghost" id="btn-nuevo-forzar">
                             ✚ Alta nueva de todas formas

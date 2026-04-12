@@ -1,0 +1,7 @@
+[tool.poetry]
+name = "zaris-api"
+version = "1.0.0"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"

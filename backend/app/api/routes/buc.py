@@ -1,0 +1,339 @@
+"""
+ZARIS API — Rutas del módulo BUC (Base Única de Ciudadanos).
+Endpoints: /api/v1/buc/
+"""
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select, or_, func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.core.database import get_db
+from app.models.buc import (
+    Nacionalidad, TipoRepresentacion, Actividad,
+    Ciudadano, Empresa, CiudadanoEmpresa
+)
+from app.schemas.buc import (
+    NacionalidadOut, TipoRepresentacionOut, ActividadOut,
+    CiudadanoCreate, CiudadanoUpdate, CiudadanoOut, CiudadanoConNacionalidad,
+    EmpresaCreate, EmpresaUpdate, EmpresaOut, EmpresaConActividad,
+    CiudadanoEmpresaCreate, CiudadanoEmpresaOut
+)
+
+router = APIRouter(prefix="/api/v1/buc", tags=["BUC"])
+
+
+# ═══════════════════════════════════════════════════════════════
+# CATÁLOGOS
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/nacionalidades", response_model=list[NacionalidadOut])
+async def listar_nacionalidades(db: AsyncSession = Depends(get_db)):
+    """Listar todas las nacionalidades."""
+    result = await db.execute(select(Nacionalidad).order_by(Nacionalidad.pais))
+    return result.scalars().all()
+
+
+@router.get("/actividades", response_model=list[ActividadOut])
+async def listar_actividades(db: AsyncSession = Depends(get_db)):
+    """Listar todas las actividades CLAE."""
+    result = await db.execute(select(Actividad).order_by(Actividad.descripcion))
+    return result.scalars().all()
+
+
+@router.get("/tipo-representacion", response_model=list[TipoRepresentacionOut])
+async def listar_tipo_representacion(db: AsyncSession = Depends(get_db)):
+    """Listar tipos de representación ciudadano-empresa."""
+    result = await db.execute(select(TipoRepresentacion).order_by(TipoRepresentacion.id))
+    return result.scalars().all()
+
+
+# ═══════════════════════════════════════════════════════════════
+# CIUDADANOS
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/ciudadanos/buscar", response_model=list[CiudadanoOut])
+async def buscar_ciudadano(
+    q: str = Query(..., min_length=1, description="DNI, CUIL, Email o Nombre"),
+    tipo: str = Query("auto", description="'numero' para DNI/CUIL, 'texto' para nombre/apellido, 'auto' para detectar"),
+    db: AsyncSession = Depends(get_db)
+):
+    """Buscar ciudadano por DNI, CUIL, email o nombre (contains)."""
+    # Determinar modo de búsqueda
+    es_numerico = tipo == "numero" or (tipo == "auto" and q.replace("-","").isdigit())
+
+    if es_numerico:
+        cond = or_(
+            Ciudadano.doc_nro.ilike(f"%{q}%"),
+            Ciudadano.cuil.ilike(f"%{q}%"),
+        )
+    else:
+        cond = or_(
+            Ciudadano.nombre.ilike(f"%{q}%"),
+            Ciudadano.apellido.ilike(f"%{q}%"),
+            Ciudadano.email.ilike(f"%{q}%"),
+        )
+
+    query = select(Ciudadano).where(
+        Ciudadano.activo == True,
+        cond
+    ).order_by(Ciudadano.apellido, Ciudadano.nombre).limit(20)
+    result = await db.execute(query)
+    return result.scalars().all()
+
+
+@router.get("/ciudadanos/verificar-duplicado")
+async def verificar_duplicado_ciudadano(
+    campo: str = Query(..., description="Campo a verificar: email, telefono, cuil, doc_nro"),
+    valor: str = Query(..., description="Valor a buscar"),
+    excluir_id: Optional[int] = Query(None, description="ID a excluir (para edición)"),
+    db: AsyncSession = Depends(get_db)
+):
+    """Verificar si ya existe un ciudadano con ese valor en el campo dado."""
+    campo_map = {
+        "email": Ciudadano.email,
+        "telefono": Ciudadano.telefono,
+        "cuil": Ciudadano.cuil,
+        "doc_nro": Ciudadano.doc_nro,
+    }
+    if campo not in campo_map:
+        raise HTTPException(status_code=400, detail=f"Campo '{campo}' no soportado")
+
+    col = campo_map[campo]
+    q = select(Ciudadano).where(col == valor, Ciudadano.activo == True)
+    if excluir_id:
+        q = q.where(Ciudadano.id_ciudadano != excluir_id)
+    result = await db.execute(q)
+    c = result.scalars().first()
+    if c:
+        return {"existe": True, "id": c.id_ciudadano, "nombre": f"{c.apellido}, {c.nombre}", "cuil": c.cuil}
+    return {"existe": False}
+
+
+@router.post("/ciudadanos", response_model=CiudadanoOut, status_code=201)
+async def crear_ciudadano(
+    data: CiudadanoCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    """Alta de ciudadano."""
+    # Verificar duplicados (doc_tipo + doc_nro)
+    existing = await db.execute(
+        select(Ciudadano).where(
+            Ciudadano.doc_tipo == data.doc_tipo,
+            Ciudadano.doc_nro == data.doc_nro
+        )
+    )
+    if existing.scalars().first():
+        raise HTTPException(
+            status_code=409,
+            detail=f"Ya existe un ciudadano con {data.doc_tipo} {data.doc_nro}"
+        )
+
+    # Verificar CUIL duplicado
+    existing_cuil = await db.execute(
+        select(Ciudadano).where(Ciudadano.cuil == data.cuil)
+    )
+    if existing_cuil.scalars().first():
+        raise HTTPException(status_code=409, detail=f"Ya existe un ciudadano con CUIL {data.cuil}")
+
+    ciudadano = Ciudadano(**data.model_dump())
+    db.add(ciudadano)
+    await db.commit()
+    await db.refresh(ciudadano)
+    return ciudadano
+
+
+@router.get("/ciudadanos/{id}", response_model=CiudadanoConNacionalidad)
+async def obtener_ciudadano(id: int, db: AsyncSession = Depends(get_db)):
+    """Obtener ciudadano por ID con datos de nacionalidad."""
+    result = await db.execute(
+        select(Ciudadano)
+        .options(selectinload(Ciudadano.nacionalidad))
+        .where(Ciudadano.id_ciudadano == id)
+    )
+    ciudadano = result.scalars().first()
+    if not ciudadano:
+        raise HTTPException(status_code=404, detail="Ciudadano no encontrado")
+    return ciudadano
+
+
+@router.put("/ciudadanos/{id}", response_model=CiudadanoOut)
+async def modificar_ciudadano(
+    id: int,
+    data: CiudadanoUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    """Modificar ciudadano existente (update parcial)."""
+    result = await db.execute(
+        select(Ciudadano).where(Ciudadano.id_ciudadano == id)
+    )
+    ciudadano = result.scalars().first()
+    if not ciudadano:
+        raise HTTPException(status_code=404, detail="Ciudadano no encontrado")
+
+    update_data = data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(ciudadano, field, value)
+
+    await db.commit()
+    await db.refresh(ciudadano)
+    return ciudadano
+
+
+# ═══════════════════════════════════════════════════════════════
+# EMPRESAS
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/empresas/buscar", response_model=list[EmpresaOut])
+async def buscar_empresa(
+    q: str = Query(..., min_length=1, description="CUIT, Email o Nombre"),
+    tipo: str = Query("auto", description="'numero' para CUIT, 'texto' para nombre, 'auto' para detectar"),
+    db: AsyncSession = Depends(get_db)
+):
+    """Buscar empresa por CUIT, email o nombre (contains)."""
+    es_numerico = tipo == "numero" or (tipo == "auto" and q.replace("-","").isdigit())
+
+    if es_numerico:
+        cond = or_(
+            Empresa.cuit.ilike(f"%{q}%"),
+        )
+    else:
+        cond = or_(
+            Empresa.nombre.ilike(f"%{q}%"),
+            Empresa.email.ilike(f"%{q}%"),
+        )
+
+    query = select(Empresa).where(
+        Empresa.activo == True,
+        cond
+    ).order_by(Empresa.nombre).limit(20)
+    result = await db.execute(query)
+    return result.scalars().all()
+
+
+@router.get("/empresas/verificar-duplicado")
+async def verificar_duplicado_empresa(
+    campo: str = Query(..., description="Campo a verificar: email, telefono, cuit"),
+    valor: str = Query(..., description="Valor a buscar"),
+    excluir_id: Optional[int] = Query(None, description="ID a excluir (para edición)"),
+    db: AsyncSession = Depends(get_db)
+):
+    """Verificar si ya existe una empresa con ese valor en el campo dado."""
+    campo_map = {
+        "email": Empresa.email,
+        "telefono": Empresa.telefono,
+        "cuit": Empresa.cuit,
+    }
+    if campo not in campo_map:
+        raise HTTPException(status_code=400, detail=f"Campo '{campo}' no soportado")
+
+    col = campo_map[campo]
+    q = select(Empresa).where(col == valor, Empresa.activo == True)
+    if excluir_id:
+        q = q.where(Empresa.id_empresa != excluir_id)
+    result = await db.execute(q)
+    e = result.scalars().first()
+    if e:
+        return {"existe": True, "id": e.id_empresa, "nombre": e.nombre, "cuit": e.cuit}
+    return {"existe": False}
+
+
+@router.post("/empresas", response_model=EmpresaOut, status_code=201)
+async def crear_empresa(
+    data: EmpresaCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    """Alta de empresa."""
+    existing = await db.execute(
+        select(Empresa).where(Empresa.cuit == data.cuit)
+    )
+    if existing.scalars().first():
+        raise HTTPException(status_code=409, detail=f"Ya existe una empresa con CUIT {data.cuit}")
+
+    empresa = Empresa(**data.model_dump())
+    db.add(empresa)
+    await db.commit()
+    await db.refresh(empresa)
+    return empresa
+
+
+@router.get("/empresas/{id}", response_model=EmpresaConActividad)
+async def obtener_empresa(id: int, db: AsyncSession = Depends(get_db)):
+    """Obtener empresa por ID con datos de actividad."""
+    result = await db.execute(
+        select(Empresa)
+        .options(selectinload(Empresa.actividad))
+        .where(Empresa.id_empresa == id)
+    )
+    empresa = result.scalars().first()
+    if not empresa:
+        raise HTTPException(status_code=404, detail="Empresa no encontrada")
+    return empresa
+
+
+@router.put("/empresas/{id}", response_model=EmpresaOut)
+async def modificar_empresa(
+    id: int,
+    data: EmpresaUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    """Modificar empresa existente."""
+    result = await db.execute(
+        select(Empresa).where(Empresa.id_empresa == id)
+    )
+    empresa = result.scalars().first()
+    if not empresa:
+        raise HTTPException(status_code=404, detail="Empresa no encontrada")
+
+    update_data = data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(empresa, field, value)
+
+    await db.commit()
+    await db.refresh(empresa)
+    return empresa
+
+
+# ═══════════════════════════════════════════════════════════════
+# CIUDADANO-EMPRESA (relación)
+# ═══════════════════════════════════════════════════════════════
+
+@router.post("/ciudadano-empresa", response_model=CiudadanoEmpresaOut, status_code=201)
+async def crear_relacion_ciudadano_empresa(
+    data: CiudadanoEmpresaCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    """Crear relación ciudadano-empresa con tipo de representación."""
+    # Verificar que el ciudadano existe
+    cid = await db.execute(
+        select(Ciudadano).where(Ciudadano.id_ciudadano == data.id_ciudadano)
+    )
+    if not cid.scalars().first():
+        raise HTTPException(status_code=404, detail="Ciudadano no encontrado")
+
+    # Verificar que la empresa existe
+    emp = await db.execute(
+        select(Empresa).where(Empresa.id_empresa == data.id_empresa)
+    )
+    if not emp.scalars().first():
+        raise HTTPException(status_code=404, detail="Empresa no encontrada")
+
+    # Verificar duplicado
+    existing = await db.execute(
+        select(CiudadanoEmpresa).where(
+            CiudadanoEmpresa.id_ciudadano == data.id_ciudadano,
+            CiudadanoEmpresa.id_empresa == data.id_empresa,
+            CiudadanoEmpresa.id_tipo_representacion == data.id_tipo_representacion
+        )
+    )
+    if existing.scalars().first():
+        raise HTTPException(
+            status_code=409,
+            detail="Ya existe esta relacion ciudadano-empresa con ese tipo de representacion"
+        )
+
+    relacion = CiudadanoEmpresa(**data.model_dump())
+    db.add(relacion)
+    await db.commit()
+    await db.refresh(relacion)
+    return relacion

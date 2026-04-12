@@ -127,6 +127,63 @@ const ZUtils = {
     },
 
     /**
+     * Modal post-guardado: OK (nueva alta) o Salir (volver al menú)
+     * onOk: función a llamar cuando elige "OK"
+     * onSalir: función a llamar cuando elige "Salir" (default: ir a menu.html)
+     */
+    modalGuardado(titulo, detalle, onOk, onSalir) {
+        const overlay = document.createElement('div');
+        overlay.className = 'z-modal-overlay active';
+        overlay.innerHTML = `
+            <div class="z-modal" style="max-width:420px;">
+                <div class="z-modal__header" style="background:linear-gradient(135deg,#1B5E20,#2E7D32);color:#fff;border-radius:12px 12px 0 0;">
+                    <h3 class="z-modal__title" style="color:#fff;">✅ ${titulo}</h3>
+                </div>
+                <div class="z-modal__body" style="text-align:center;padding:1.5rem 2rem;">
+                    <p style="font-size:1rem;color:var(--z-text);margin-bottom:0.3rem;">${detalle}</p>
+                    <p style="font-size:0.85rem;color:var(--z-text2);">¿Qué desea hacer a continuación?</p>
+                </div>
+                <div class="z-modal__footer" style="justify-content:center;gap:1rem;">
+                    <button class="z-btn z-btn--ghost z-btn--lg" data-action="salir">↗ Salir al Menú</button>
+                    <button class="z-btn z-btn--primary z-btn--lg" data-action="ok">✚ Nueva Alta</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', (e) => {
+            const action = e.target.closest('[data-action]')?.dataset.action;
+            if (action === 'ok') {
+                overlay.remove();
+                if (onOk) onOk();
+            } else if (action === 'salir' || e.target === overlay) {
+                overlay.remove();
+                if (onSalir) onSalir(); else window.location.href = 'menu.html';
+            }
+        });
+    },
+
+    /**
+     * Verificar duplicado vía API
+     * entidad: 'ciudadanos' | 'empresas'
+     * campo: 'email' | 'telefono' | 'cuil' | 'cuit' | 'doc_nro'
+     * valor: valor a verificar
+     * excluirId: ID a excluir (para edición)
+     * Retorna objeto {existe, id, nombre} o {existe: false}
+     */
+    async verificarDuplicado(entidad, campo, valor, excluirId = null) {
+        if (!valor || valor.trim() === '') return { existe: false };
+        try {
+            let url = `/ciudadanos/verificar-duplicado`;
+            if (entidad === 'empresas') url = `/empresas/verificar-duplicado`;
+            let qs = `campo=${campo}&valor=${encodeURIComponent(valor)}`;
+            if (excluirId) qs += `&excluir_id=${excluirId}`;
+            return await ZUtils.apiFetch(`${url}?${qs}`);
+        } catch {
+            return { existe: false };
+        }
+    },
+
+    /**
      * Poblar un <select> con opciones
      */
     populateSelect(selectEl, options, valueProp = 'value', labelProp = 'label', placeholder = 'Seleccionar...') {

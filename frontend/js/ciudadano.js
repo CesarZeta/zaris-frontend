@@ -5,12 +5,14 @@
 document.addEventListener('DOMContentLoaded', () => {
     // ── State ──
     const state = {
-        mode: 'search',       // 'search' | 'new' | 'edit'
+        mode: 'search',
         ciudadanoId: null,
         ciudadanoGuardado: false,
+        ciudadanoEncontrado: null,
         nacionalidades: [],
         tipoRepresentacion: [],
-        actividades: []
+        actividades: [],
+        busquedaTipo: 'numero'
     };
 
     // ── Elements ──
@@ -30,12 +32,16 @@ document.addEventListener('DOMContentLoaded', () => {
         obsCount:       document.getElementById('obs-count'),
 
         // Buttons
-        btnBuscar:          document.getElementById('btn-buscar'),
-        btnNuevo:           document.getElementById('btn-nuevo'),
-        btnEditarEncontrado: document.getElementById('btn-editar-encontrado'),
-        btnNuevoForzar:     document.getElementById('btn-nuevo-forzar'),
-        btnGuardar:         document.getElementById('btn-guardar'),
-        btnCancelar:        document.getElementById('btn-cancelar'),
+        btnBuscar:                document.getElementById('btn-buscar'),
+        btnNuevo:                 document.getElementById('btn-nuevo'),
+        btnEditarEncontrado:      document.getElementById('btn-editar-encontrado'),
+        btnConsultarEncontrado:   document.getElementById('btn-consultar-encontrado'),
+        btnNuevoForzar:           document.getElementById('btn-nuevo-forzar'),
+        btnGuardar:               document.getElementById('btn-guardar'),
+        btnCancelar:              document.getElementById('btn-cancelar'),
+        btnModoNumero:            document.getElementById('btn-modo-numero'),
+        btnModoTexto:             document.getElementById('btn-modo-texto'),
+        resultList:               document.getElementById('result-list'),
 
         // Empresa vinculada
         btnGuardarEmpresa:  document.getElementById('btn-guardar-empresa'),
@@ -98,23 +104,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Eventos ──
     function attachEvents() {
+        // Toggle tipo búsqueda
+        els.btnModoNumero.addEventListener('click', () => setModoBusqueda('numero'));
+        els.btnModoTexto.addEventListener('click',  () => setModoBusqueda('texto'));
+
         // Búsqueda
         els.btnBuscar.addEventListener('click', handleBuscar);
         els.searchQuery.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') { e.preventDefault(); handleBuscar(); }
         });
 
-        // Nuevo
+        // Nuevo / Editar / Consultar
         els.btnNuevo.addEventListener('click', () => activarModoNuevo());
         els.btnNuevoForzar.addEventListener('click', () => activarModoNuevo());
         els.btnEditarEncontrado.addEventListener('click', () => activarModoEdicion(state.ciudadanoEncontrado));
+        els.btnConsultarEncontrado.addEventListener('click', () => activarModoConsulta(state.ciudadanoEncontrado));
 
         // DNI → auto-calcula CUIL (si CUIL no fue editado manualmente)
-        const dniInput = document.getElementById('cid-doc-nro');
+        const dniInput  = document.getElementById('cid-doc-nro');
         const cuilInput = document.getElementById('cid-cuil');
 
         dniInput.addEventListener('input', () => {
             if (!cuilInput.dataset.manualInput) generarCuilDesdeDni();
+            // Lookup existente cuando DNI está completo (min 7 dígitos)
+            const digits = dniInput.value.replace(/\D/g, '');
+            if (digits.length >= 7) buscarPorIdentificadorExistente('doc_nro', digits);
         });
         document.getElementById('cid-sexo').addEventListener('change', () => {
             if (!cuilInput.dataset.manualInput) generarCuilDesdeDni();
@@ -123,16 +137,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!cuilInput.dataset.manualInput) generarCuilDesdeDni();
         });
 
-        // CUIL: formateo mientras escribe + marcar edición manual
+        // CUIL: formateo + lookup al completar
         cuilInput.addEventListener('input', (e) => {
             formatCuilInput(e);
             cuilInput.dataset.manualInput = cuilInput.value ? '1' : '';
+            const digits = cuilInput.value.replace(/\D/g, '');
+            if (digits.length === 11) buscarPorIdentificadorExistente('cuil', cuilInput.value);
         });
 
         // CUIL blur → extrae DNI si DNI está vacío
         cuilInput.addEventListener('blur', () => {
             const cuil = cuilInput.value.trim();
-            const dni = dniInput.value.trim();
+            const dni  = dniInput.value.trim();
             if (cuil && !dni) {
                 const extracted = extraerDniDeCuil(cuil);
                 if (extracted) {
@@ -142,16 +158,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Botones Validar (placeholders, funcionalidad futura)
+        // Botones Validar (placeholders)
         document.getElementById('btn-validar-dni').addEventListener('click', () => {
             ZUtils.toast('Validación con RENAPER: próximamente disponible.', 'info');
         });
         document.getElementById('btn-validar-cuil').addEventListener('click', () => {
             const input = document.getElementById('cid-cuil');
-            if (!input.value) {
-                ZUtils.toast('Ingresá un CUIL para validar.', 'warning');
-                return;
-            }
+            if (!input.value) { ZUtils.toast('Ingresá un CUIL para validar.', 'warning'); return; }
             const result = ZValidaciones.validarCuilCuit(input.value);
             if (result.valido) {
                 input.value = result.formateado;
@@ -160,6 +173,26 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 ZValidaciones.marcarCampo(input, false, result.error);
                 ZUtils.toast(result.error, 'error');
+            }
+        });
+
+        // Duplicados email y teléfono (on blur)
+        document.getElementById('cid-email').addEventListener('blur', async (e) => {
+            const val = e.target.value.trim();
+            if (!val) return;
+            const r = await ZUtils.verificarDuplicado('ciudadanos', 'email', val, state.ciudadanoId);
+            if (r.existe) {
+                ZValidaciones.marcarCampo(e.target, false, `Ya registrado: ${r.nombre}`);
+                ZUtils.toast(`⚠️ Email ya registrado en ciudadano "${r.nombre}"`, 'warning', 5000);
+            }
+        });
+        document.getElementById('cid-telefono').addEventListener('blur', async (e) => {
+            const val = e.target.value.trim();
+            if (!val) return;
+            const r = await ZUtils.verificarDuplicado('ciudadanos', 'telefono', val, state.ciudadanoId);
+            if (r.existe) {
+                ZValidaciones.marcarCampo(e.target, false, `Ya registrado: ${r.nombre}`);
+                ZUtils.toast(`⚠️ Teléfono ya registrado en ciudadano "${r.nombre}"`, 'warning', 5000);
             }
         });
 
@@ -189,6 +222,21 @@ document.addEventListener('DOMContentLoaded', () => {
         els.obsTextarea.addEventListener('input', () => {
             els.obsCount.textContent = els.obsTextarea.value.length;
         });
+    }
+
+    // ── Toggle modo búsqueda ──
+    function setModoBusqueda(modo) {
+        state.busquedaTipo = modo;
+        els.btnModoNumero.className = modo === 'numero'
+            ? 'z-btn z-btn--xs z-btn--primary' : 'z-btn z-btn--xs z-btn--ghost';
+        els.btnModoTexto.className = modo === 'texto'
+            ? 'z-btn z-btn--xs z-btn--primary' : 'z-btn z-btn--xs z-btn--ghost';
+        els.searchQuery.placeholder = modo === 'numero'
+            ? 'Ingresá DNI o CUIL...'
+            : 'Ingresá nombre o apellido...';
+        els.searchQuery.value = '';
+        els.searchResult.classList.remove('visible');
+        els.searchQuery.focus();
     }
 
     // ── Calcular dígito verificador CUIL/CUIT (Módulo 11) ──
@@ -242,32 +290,87 @@ document.addEventListener('DOMContentLoaded', () => {
         e.target.value = val;
     }
 
+    // ── Lookup CUIL/DNI existente (auto-check al tipear) ──
+    let _lookupTimer = null;
+    async function buscarPorIdentificadorExistente(campo, valor) {
+        clearTimeout(_lookupTimer);
+        _lookupTimer = setTimeout(async () => {
+            try {
+                const r = await ZUtils.verificarDuplicado('ciudadanos', campo, valor, state.ciudadanoId);
+                if (r.existe) {
+                    ZUtils.toast(`⚠️ ${campo === 'cuil' ? 'CUIL' : 'DNI'} ya registrado: "${r.nombre}". Cargando datos...`, 'warning', 5000);
+                    const ciudadano = await ZUtils.apiFetch(`/ciudadanos/${r.id}`);
+                    state.ciudadanoEncontrado = ciudadano;
+                    activarModoEdicion(ciudadano);
+                }
+            } catch { /* silencioso */ }
+        }, 800);
+    }
+
     // ── Búsqueda ──
     async function handleBuscar() {
         const query = els.searchQuery.value.trim();
         if (!query) {
-            ZUtils.toast('Ingresá un Nro. de Documento o Email para buscar.', 'warning');
+            ZUtils.toast('Ingresá un valor para buscar.', 'warning');
             els.searchQuery.focus();
             return;
         }
 
         try {
-            const resultados = await ZUtils.apiFetch(`/ciudadanos/buscar?q=${encodeURIComponent(query)}`);
+            const resultados = await ZUtils.apiFetch(
+                `/ciudadanos/buscar?q=${encodeURIComponent(query)}&tipo=${state.busquedaTipo}`
+            );
             if (resultados.length === 0) {
                 ZUtils.toast('No se encontró ningún ciudadano con esos datos.', 'info');
                 els.searchResult.classList.remove('visible');
+                els.resultList.innerHTML = '';
+            } else if (resultados.length === 1) {
+                mostrarResultadoUnico(resultados[0]);
             } else {
-                mostrarResultado(resultados[0]);
-                state.ciudadanoEncontrado = resultados[0];
+                mostrarListaResultados(resultados);
             }
         } catch (err) {
             ZUtils.toast('Error en la búsqueda: ' + err.message, 'error');
         }
     }
 
-    function mostrarResultado(ciudadano) {
+    function mostrarResultadoUnico(ciudadano) {
+        state.ciudadanoEncontrado = ciudadano;
         els.resultName.textContent = `${ciudadano.apellido}, ${ciudadano.nombre}`;
         els.resultDetail.textContent = `${ciudadano.doc_tipo} ${ciudadano.doc_nro} | CUIL: ${ciudadano.cuil} | ${ciudadano.email}`;
+        els.resultList.innerHTML = '';
+        document.getElementById('btn-editar-encontrado').style.display    = 'inline-flex';
+        document.getElementById('btn-consultar-encontrado').style.display = 'inline-flex';
+        els.searchResult.classList.add('visible');
+    }
+
+    function mostrarListaResultados(resultados) {
+        state.ciudadanoEncontrado = null;
+        els.resultName.textContent   = `Se encontraron ${resultados.length} ciudadanos:`;
+        els.resultDetail.textContent = '';
+        document.getElementById('btn-editar-encontrado').style.display    = 'none';
+        document.getElementById('btn-consultar-encontrado').style.display = 'none';
+
+        els.resultList.innerHTML = resultados.map((c, i) => `
+            <div style="padding:6px 0;border-bottom:1px solid var(--z-border);display:flex;align-items:center;gap:8px;">
+                <div style="flex:1;">
+                    <strong style="color:var(--z-primary);">${c.apellido}, ${c.nombre}</strong>
+                    <span style="font-size:0.82rem;color:var(--z-text2);margin-left:8px;">${c.doc_tipo} ${c.doc_nro}</span>
+                </div>
+                <button class="z-btn z-btn--xs z-btn--primary" data-idx="${i}" data-action="editar">✏️ Editar</button>
+                <button class="z-btn z-btn--xs z-btn--ghost"   data-idx="${i}" data-action="consultar">👁 Ver</button>
+            </div>
+        `).join('');
+
+        els.resultList.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            const ciudadano = resultados[parseInt(btn.dataset.idx)];
+            state.ciudadanoEncontrado = ciudadano;
+            if (btn.dataset.action === 'editar') activarModoEdicion(ciudadano);
+            else activarModoConsulta(ciudadano);
+        }, { once: true });
+
         els.searchResult.classList.add('visible');
     }
 
@@ -276,6 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.mode = 'new';
         state.ciudadanoId = null;
         state.ciudadanoGuardado = false;
+        state.ciudadanoEncontrado = null;
 
         els.formCiudadano.reset();
         els.formCard.style.display = 'block';
@@ -285,20 +389,74 @@ document.addEventListener('DOMContentLoaded', () => {
         els.empresaPanel.classList.remove('open');
         els.searchResult.classList.remove('visible');
         els.obsCount.textContent = '0';
+        setFormReadonly(false);
 
-        // Limpiar validaciones visuales
+        // Limpiar validaciones visuales y estado manual CUIL
         els.formCiudadano.querySelectorAll('.z-input, .z-select, .z-textarea').forEach(el => {
             ZValidaciones.limpiarCampo(el);
         });
+        delete document.getElementById('cid-cuil').dataset.manualInput;
 
-        // Scroll al formulario
-        setTimeout(() => {
-            els.formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
-
-        document.getElementById('cid-doc-tipo').focus();
+        setTimeout(() => els.formCard.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+        setTimeout(() => document.getElementById('cid-doc-tipo').focus(), 150);
     }
 
+    // ── Modo Consulta (solo lectura) ──
+    function activarModoConsulta(ciudadano) {
+        state.mode = 'view';
+        state.ciudadanoId = ciudadano ? ciudadano.id_ciudadano : null;
+        state.ciudadanoGuardado = false;
+
+        els.formCiudadano.reset();
+        els.formCard.style.display = 'block';
+        els.formTitle.textContent = 'Consulta de Ciudadano';
+        els.formState.className = 'z-form-state z-form-state--view';
+        els.formState.textContent = '👁 CONSULTA';
+        els.empresaPanel.classList.remove('open');
+        els.searchResult.classList.remove('visible');
+
+        delete document.getElementById('cid-cuil').dataset.manualInput;
+
+        if (ciudadano) poblarFormularioConsulta(ciudadano);
+        setFormReadonly(true);
+
+        setTimeout(() => els.formCard.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    }
+
+    function poblarFormularioConsulta(ciudadano) {
+        // Reusar activarModoEdicion pero solo para poblar campos
+        document.getElementById('cid-id').value          = ciudadano.id_ciudadano || '';
+        document.getElementById('cid-doc-tipo').value    = ciudadano.doc_tipo     || '';
+        document.getElementById('cid-doc-nro').value     = ciudadano.doc_nro      || '';
+        document.getElementById('cid-cuil').value        = ciudadano.cuil         || '';
+        document.getElementById('cid-nombre').value      = ciudadano.nombre       || '';
+        document.getElementById('cid-apellido').value    = ciudadano.apellido     || '';
+        document.getElementById('cid-sexo').value        = ciudadano.sexo         || '';
+        document.getElementById('cid-fecha-nac').value   = ciudadano.fecha_nac ? ciudadano.fecha_nac.substring(0, 10) : '';
+        document.getElementById('cid-nacionalidad').value = ciudadano.id_nacionalidad || '';
+        document.getElementById('cid-calle').value       = ciudadano.calle        || '';
+        document.getElementById('cid-localidad').value   = ciudadano.localidad    || '';
+        document.getElementById('cid-provincia').value   = ciudadano.provincia    || '';
+        document.getElementById('cid-latitud').value     = ciudadano.latitud      || '';
+        document.getElementById('cid-longitud').value    = ciudadano.longitud     || '';
+        document.getElementById('cid-telefono').value    = ciudadano.telefono     || '';
+        document.getElementById('cid-email').value       = ciudadano.email        || '';
+        document.getElementById('cid-observaciones').value = ciudadano.observaciones || '';
+        els.obsCount.textContent = (ciudadano.observaciones || '').length;
+        document.getElementById('cid-dni-validado').checked    = !!ciudadano.ren_chk;
+        document.getElementById('cid-cuil-validado').checked   = !!ciudadano.cuil_chk;
+        document.getElementById('cid-email-verificado').checked = !!ciudadano.email_chk;
+    }
+
+    function setFormReadonly(readonly) {
+        els.formCiudadano.querySelectorAll('.z-input:not([type=hidden]), .z-select, .z-textarea').forEach(el => {
+            el.readOnly = readonly;
+            el.disabled = readonly;
+            el.style.background = readonly ? '#F5F5F5' : '';
+            el.style.cursor     = readonly ? 'not-allowed' : '';
+        });
+        els.btnGuardar.style.display = readonly ? 'none' : '';
+    }
     // ── Modo Edición ──
     function activarModoEdicion(ciudadano) {
         state.mode = 'edit';
@@ -312,6 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
         els.formState.textContent = '✏️ EDICIÓN';
         els.empresaPanel.classList.remove('open');
         els.searchResult.classList.remove('visible');
+        setFormReadonly(false);
 
         // Limpiar estado manual del CUIL
         const cuilInput = document.getElementById('cid-cuil');
@@ -326,9 +485,9 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('cid-doc-nro').value   = ciudadano.doc_nro   || '';
             cuilInput.value = ciudadano.cuil || '';
 
-            // Indicadores de validación (set programmáticamente, no interactivos)
-            document.getElementById('cid-dni-validado').checked   = !!ciudadano.ren_chk;
-            document.getElementById('cid-cuil-validado').checked  = !!ciudadano.cuil_chk;
+            // Indicadores de validación (set programáticamente, no interactivos)
+            document.getElementById('cid-dni-validado').checked    = !!ciudadano.ren_chk;
+            document.getElementById('cid-cuil-validado').checked   = !!ciudadano.cuil_chk;
             document.getElementById('cid-email-verificado').checked = !!ciudadano.email_chk;
 
             // Datos Personales
@@ -355,9 +514,7 @@ document.addEventListener('DOMContentLoaded', () => {
             els.obsCount.textContent = (ciudadano.observaciones || '').length;
         }
 
-        setTimeout(() => {
-            els.formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
+        setTimeout(() => els.formCard.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     }
 
     // ── Validar CUIL (legacy, usado solo en modo edición si se edita manualmente) ──
@@ -389,18 +546,33 @@ document.addEventListener('DOMContentLoaded', () => {
             ZValidaciones.marcarCampo(document.getElementById('cid-cuil'), false, 'Ingresá el CUIL o el DNI');
         }
 
-        const email = document.getElementById('cid-email').value;
-        if (email && !ZValidaciones.validarEmail(email)) {
-            ZValidaciones.marcarCampo(document.getElementById('cid-email'), false, 'Formato de email inválido');
-            errores.push('Email inválido');
-        }
-
+        // ── Verificar duplicados email/tel ──
+        const email    = document.getElementById('cid-email').value;
         const telefono = document.getElementById('cid-telefono').value;
+        if (email) {
+            const rVal = ZValidaciones.validarEmail(email);
+            if (!rVal) {
+                ZValidaciones.marcarCampo(document.getElementById('cid-email'), false, 'Formato de email inválido');
+                errores.push('Email inválido');
+            } else {
+                const rDup = await ZUtils.verificarDuplicado('ciudadanos', 'email', email, state.ciudadanoId);
+                if (rDup.existe) {
+                    ZValidaciones.marcarCampo(document.getElementById('cid-email'), false, `Ya registrado: ${rDup.nombre}`);
+                    errores.push('Email duplicado');
+                }
+            }
+        }
         if (telefono) {
             const telResult = ZValidaciones.validarTelefono(telefono);
             if (!telResult.valido) {
                 ZValidaciones.marcarCampo(document.getElementById('cid-telefono'), false, telResult.error);
                 errores.push('Teléfono inválido');
+            } else {
+                const rDup = await ZUtils.verificarDuplicado('ciudadanos', 'telefono', telefono, state.ciudadanoId);
+                if (rDup.existe) {
+                    ZValidaciones.marcarCampo(document.getElementById('cid-telefono'), false, `Ya registrado: ${rDup.nombre}`);
+                    errores.push('Teléfono duplicado');
+                }
             }
         }
 
@@ -445,24 +617,19 @@ document.addEventListener('DOMContentLoaded', () => {
             state.ciudadanoId = response.id_ciudadano || state.ciudadanoId;
             state.ciudadanoGuardado = true;
 
-            const msgAccion = isEdit ? 'actualizado' : 'guardado';
-            ZUtils.toast(`Ciudadano ${msgAccion} exitosamente (ID: ${state.ciudadanoId})`, 'success');
+            const accion = isEdit ? 'actualizado' : 'guardado';
+            ZUtils.modalGuardado(
+                `Ciudadano ${accion}`,
+                `${response.apellido || ''}, ${response.nombre || ''} — ID: ${state.ciudadanoId}`,
+                () => activarModoNuevo(),
+                () => { window.location.href = 'menu.html'; }
+            );
 
             // Si emp_chk está marcado, desplegar panel empresa
-            if (els.empChk.checked) {
+            if (els.empChk.checked && !isEdit) {
                 document.getElementById('ev-ciudadano-id').value = state.ciudadanoId;
                 els.empresaPanel.classList.add('open');
-                setTimeout(() => {
-                    els.empresaPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 400);
-            } else if (!isEdit) {
-                setTimeout(() => {
-                    if (confirm('¿Deseas dar de alta otro ciudadano?')) {
-                        activarModoNuevo();
-                    } else {
-                        window.location.href = 'menu.html';
-                    }
-                }, 1000);
+                setTimeout(() => els.empresaPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 400);
             }
         } catch (err) {
             ZUtils.toast(`Error al guardar: ${err.message}`, 'error');

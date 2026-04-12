@@ -1,39 +1,43 @@
 /**
  * ZARIS — Lógica del Formulario de Empresa (independiente)
- * Gestión de empresa sin flujo desde ciudadano.
- * El campo Tipo Representación NO se muestra en este modo.
+ * Lookup CUIT, duplicados email/tel, búsqueda numérica/texto, CLAE filtro.
  */
 document.addEventListener('DOMContentLoaded', () => {
     // ── State ──
     const state = {
-        mode: 'search',
+        mode: 'search',       // 'search' | 'new' | 'edit' | 'view'
         empresaId: null,
-        actividades: []
+        empresaEncontrada: null,
+        actividades: [],
+        busquedaTipo: 'numero' // 'numero' | 'texto'
     };
 
     // ── Elements ──
     const els = {
-        searchPanel:    document.getElementById('search-panel'),
-        searchQuery:    document.getElementById('search-query'),
-        searchResult:   document.getElementById('search-result'),
-        resultName:     document.getElementById('result-name'),
-        resultDetail:   document.getElementById('result-detail'),
-        formCard:       document.getElementById('form-card'),
-        formEmpresa:    document.getElementById('form-empresa'),
-        formTitle:      document.getElementById('form-title'),
-        formState:      document.getElementById('form-state'),
-        obsTextarea:    document.getElementById('emp-observaciones'),
-        obsCount:       document.getElementById('obs-count'),
-        badgeCategoria: document.getElementById('badge-categoria'),
-
-        // Buttons
-        btnBuscar:          document.getElementById('btn-buscar'),
-        btnNuevo:           document.getElementById('btn-nuevo'),
-        btnEditarEncontrado: document.getElementById('btn-editar-encontrado'),
-        btnNuevoForzar:     document.getElementById('btn-nuevo-forzar'),
-        btnGuardar:         document.getElementById('btn-guardar'),
-        btnCancelar:        document.getElementById('btn-cancelar'),
-        btnValidarCuit:     document.getElementById('btn-validar-cuit'),
+        searchQuery:      document.getElementById('search-query'),
+        searchResult:     document.getElementById('search-result'),
+        resultName:       document.getElementById('result-name'),
+        resultDetail:     document.getElementById('result-detail'),
+        resultList:       document.getElementById('result-list'),
+        formCard:         document.getElementById('form-card'),
+        formEmpresa:      document.getElementById('form-empresa'),
+        formTitle:        document.getElementById('form-title'),
+        formState:        document.getElementById('form-state'),
+        obsTextarea:      document.getElementById('emp-observaciones'),
+        obsCount:         document.getElementById('obs-count'),
+        badgeCategoria:   document.getElementById('badge-categoria'),
+        btnBuscar:                document.getElementById('btn-buscar'),
+        btnNuevo:                 document.getElementById('btn-nuevo'),
+        btnEditarEncontrado:      document.getElementById('btn-editar-encontrado'),
+        btnConsultarEncontrado:   document.getElementById('btn-consultar-encontrado'),
+        btnNuevoForzar:           document.getElementById('btn-nuevo-forzar'),
+        btnGuardar:               document.getElementById('btn-guardar'),
+        btnCancelar:              document.getElementById('btn-cancelar'),
+        btnValidarCuit:           document.getElementById('btn-validar-cuit'),
+        btnModoNumero:            document.getElementById('btn-modo-numero'),
+        btnModoTexto:             document.getElementById('btn-modo-texto'),
+        claeFiltro:               document.getElementById('clae-filtro'),
+        selActividad:             document.getElementById('emp-actividad'),
     };
 
     // ── Init ──
@@ -45,42 +49,78 @@ document.addEventListener('DOMContentLoaded', () => {
         els.searchQuery.focus();
     }
 
-    // ── Cargar Actividades ──
+    // ─────────────────────────────────────────────────────────
+    // ACTIVIDADES CLAE
+    // ─────────────────────────────────────────────────────────
     async function cargarActividades() {
         try {
             state.actividades = await ZUtils.apiFetch('/actividades');
-            const sel = document.getElementById('emp-actividad');
-            sel.innerHTML = '<option value="">Seleccionar actividad...</option>';
-
-            // Agrupar por categoría
-            const grupos = {};
-            state.actividades.forEach(a => {
-                if (!grupos[a.categoria_tasa]) grupos[a.categoria_tasa] = [];
-                grupos[a.categoria_tasa].push(a);
-            });
-
-            Object.entries(grupos).forEach(([cat, acts]) => {
-                const optgroup = document.createElement('optgroup');
-                optgroup.label = cat.charAt(0).toUpperCase() + cat.slice(1);
-                acts.forEach(a => {
-                    const opt = document.createElement('option');
-                    opt.value = a.id;
-                    opt.dataset.categoria = a.categoria_tasa;
-                    opt.textContent = `${a.codigo_clae} — ${a.descripcion}`;
-                    optgroup.appendChild(opt);
-                });
-                sel.appendChild(optgroup);
-            });
-
-            console.log('[ZARIS] Actividades cargadas desde API');
+            renderActividades('');
         } catch (err) {
             console.error('[ZARIS] Error cargando actividades:', err);
             ZUtils.toast('Error cargando actividades desde el servidor', 'error');
         }
     }
 
-    // ── Eventos ──
+    function renderActividades(filtro) {
+        const sel = els.selActividad;
+        const valorActual = sel.value;
+        sel.innerHTML = '<option value="">Seleccionar actividad...</option>';
+
+        const filtroLower = filtro.toLowerCase();
+        const grupos = {};
+        state.actividades.forEach(a => {
+            if (filtroLower && !a.descripcion.toLowerCase().includes(filtroLower) &&
+                !String(a.codigo_clae).includes(filtroLower)) return;
+            if (!grupos[a.categoria_tasa]) grupos[a.categoria_tasa] = [];
+            grupos[a.categoria_tasa].push(a);
+        });
+
+        Object.entries(grupos).forEach(([cat, acts]) => {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = cat.charAt(0).toUpperCase() + cat.slice(1);
+            acts.forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = a.id;
+                opt.dataset.categoria = a.categoria_tasa;
+                opt.textContent = `${a.codigo_clae} — ${a.descripcion}`;
+                optgroup.appendChild(opt);
+            });
+            sel.appendChild(optgroup);
+        });
+
+        // Restaurar valor seleccionado si sigue disponible
+        if (valorActual) sel.value = valorActual;
+        actualizarBadgeCategoria();
+    }
+
+    function actualizarBadgeCategoria() {
+        const selected = els.selActividad.options[els.selActividad.selectedIndex];
+        if (selected && selected.dataset.categoria) {
+            const cat = selected.dataset.categoria;
+            const colors = {
+                comercio: { bg: '#E3F2FD', color: '#1565C0' },
+                servicios: { bg: '#E8F5E9', color: '#2E7D32' },
+                industria: { bg: '#FFF8E1', color: '#F57F17' }
+            };
+            const c = colors[cat] || { bg: '#F5F5F5', color: '#333' };
+            els.badgeCategoria.textContent = `Categoría: ${cat.toUpperCase()}`;
+            els.badgeCategoria.style.background = c.bg;
+            els.badgeCategoria.style.color = c.color;
+            els.badgeCategoria.style.display = 'inline-flex';
+        } else {
+            els.badgeCategoria.style.display = 'none';
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // EVENTOS
+    // ─────────────────────────────────────────────────────────
     function attachEvents() {
+        // Toggle búsqueda
+        els.btnModoNumero.addEventListener('click', () => setModoBusqueda('numero'));
+        els.btnModoTexto.addEventListener('click',  () => setModoBusqueda('texto'));
+
         // Búsqueda
         els.btnBuscar.addEventListener('click', handleBuscar);
         els.searchQuery.addEventListener('keydown', (e) => {
@@ -90,31 +130,45 @@ document.addEventListener('DOMContentLoaded', () => {
         // Nuevo
         els.btnNuevo.addEventListener('click', () => activarModoNuevo());
         els.btnNuevoForzar.addEventListener('click', () => activarModoNuevo());
-        els.btnEditarEncontrado.addEventListener('click', () => activarModoEdicion());
+        els.btnEditarEncontrado.addEventListener('click', () => activarModoEdicion(state.empresaEncontrada));
+        els.btnConsultarEncontrado.addEventListener('click', () => activarModoConsulta(state.empresaEncontrada));
 
-        // CUIT
-        els.btnValidarCuit.addEventListener('click', handleValidarCuit);
-        document.getElementById('emp-cuit').addEventListener('input', formatCuitInput);
+        // CUIT: formato + lookup automático al completar
+        const cuitInput = document.getElementById('emp-cuit');
+        cuitInput.addEventListener('input', (e) => {
+            formatCuitInput(e);
+            const digits = cuitInput.value.replace(/\D/g, '');
+            if (digits.length === 11) buscarPorCuitExistente(cuitInput.value);
+        });
 
-        // Actividad -> badge categoría
-        document.getElementById('emp-actividad').addEventListener('change', (e) => {
-            const selected = e.target.options[e.target.selectedIndex];
-            if (selected && selected.dataset.categoria) {
-                const cat = selected.dataset.categoria;
-                const colors = {
-                    comercio: { bg: '#E3F2FD', color: '#1565C0' },
-                    servicios: { bg: '#E8F5E9', color: '#2E7D32' },
-                    industria: { bg: '#FFF8E1', color: '#F57F17' }
-                };
-                const c = colors[cat] || { bg: '#F5F5F5', color: '#333' };
-                els.badgeCategoria.textContent = `Categoría: ${cat.toUpperCase()}`;
-                els.badgeCategoria.style.background = c.bg;
-                els.badgeCategoria.style.color = c.color;
-                els.badgeCategoria.style.display = 'inline-flex';
-            } else {
-                els.badgeCategoria.style.display = 'none';
+        // CLAE filtro
+        els.claeFiltro.addEventListener('input', () => renderActividades(els.claeFiltro.value));
+
+        // Actividad → badge categoría
+        els.selActividad.addEventListener('change', actualizarBadgeCategoria);
+
+        // Duplicados email/teléfono (on blur)
+        document.getElementById('emp-email').addEventListener('blur', async (e) => {
+            const val = e.target.value.trim();
+            if (!val) return;
+            const r = await ZUtils.verificarDuplicado('empresas', 'email', val, state.empresaId);
+            if (r.existe) {
+                ZValidaciones.marcarCampo(e.target, false, `Ya registrado en: ${r.nombre}`);
+                ZUtils.toast(`⚠️ Email ya registrado en empresa "${r.nombre}"`, 'warning', 5000);
             }
         });
+        document.getElementById('emp-telefono').addEventListener('blur', async (e) => {
+            const val = e.target.value.trim();
+            if (!val) return;
+            const r = await ZUtils.verificarDuplicado('empresas', 'telefono', val, state.empresaId);
+            if (r.existe) {
+                ZValidaciones.marcarCampo(e.target, false, `Ya registrado en: ${r.nombre}`);
+                ZUtils.toast(`⚠️ Teléfono ya registrado en empresa "${r.nombre}"`, 'warning', 5000);
+            }
+        });
+
+        // Validar CUIT
+        els.btnValidarCuit.addEventListener('click', handleValidarCuit);
 
         // Guardar/Cancelar
         els.btnGuardar.addEventListener('click', handleGuardar);
@@ -126,38 +180,133 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ── Búsqueda ──
+    // ─────────────────────────────────────────────────────────
+    // TOGGLE MODO BÚSQUEDA
+    // ─────────────────────────────────────────────────────────
+    function setModoBusqueda(modo) {
+        state.busquedaTipo = modo;
+        els.btnModoNumero.className = modo === 'numero'
+            ? 'z-btn z-btn--xs z-btn--primary'
+            : 'z-btn z-btn--xs z-btn--ghost';
+        els.btnModoTexto.className = modo === 'texto'
+            ? 'z-btn z-btn--xs z-btn--primary'
+            : 'z-btn z-btn--xs z-btn--ghost';
+        els.searchQuery.placeholder = modo === 'numero'
+            ? 'Ingresá CUIT de la empresa...'
+            : 'Ingresá nombre o razón social...';
+        els.searchQuery.value = '';
+        els.searchResult.classList.remove('visible');
+        els.searchQuery.focus();
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // BÚSQUEDA
+    // ─────────────────────────────────────────────────────────
     async function handleBuscar() {
         const query = els.searchQuery.value.trim();
         if (!query) {
-            ZUtils.toast('Ingresá un CUIT o Email para buscar.', 'warning');
+            ZUtils.toast('Ingresá un valor para buscar.', 'warning');
             els.searchQuery.focus();
             return;
         }
 
         try {
-            const resultados = await ZUtils.apiFetch(`/empresas/buscar?q=${encodeURIComponent(query)}`);
+            const resultados = await ZUtils.apiFetch(
+                `/empresas/buscar?q=${encodeURIComponent(query)}&tipo=${state.busquedaTipo}`
+            );
             if (resultados.length === 0) {
                 ZUtils.toast('No se encontró ninguna empresa con esos datos.', 'info');
                 els.searchResult.classList.remove('visible');
+                els.resultList.innerHTML = '';
+            } else if (resultados.length === 1) {
+                mostrarResultadoUnico(resultados[0]);
             } else {
-                const emp = resultados[0];
-                els.resultName.textContent = emp.nombre;
-                els.resultDetail.textContent = `CUIT: ${emp.cuit} | ${emp.email}`;
-                els.searchResult.classList.add('visible');
-                state.empresaEncontrada = emp;
+                mostrarListaResultados(resultados);
             }
         } catch (err) {
             ZUtils.toast('Error en la búsqueda: ' + err.message, 'error');
         }
     }
 
-    // ── Modo Nuevo ──
+    function mostrarResultadoUnico(emp) {
+        state.empresaEncontrada = emp;
+        els.resultName.textContent = emp.nombre;
+        els.resultDetail.textContent = `CUIT: ${emp.cuit} | ${emp.email} | ${emp.localidad || ''}`;
+        els.resultList.innerHTML = '';
+        els.btnEditarEncontrado.style.display    = 'inline-flex';
+        els.btnConsultarEncontrado.style.display = 'inline-flex';
+        els.searchResult.classList.add('visible');
+    }
+
+    function mostrarListaResultados(resultados) {
+        state.empresaEncontrada = null;
+        els.resultName.textContent    = `Se encontraron ${resultados.length} empresas:`;
+        els.resultDetail.textContent  = '';
+        els.btnEditarEncontrado.style.display    = 'none';
+        els.btnConsultarEncontrado.style.display = 'none';
+
+        els.resultList.innerHTML = resultados.map((emp, i) => `
+            <div style="padding:6px 0;border-bottom:1px solid var(--z-border);display:flex;align-items:center;gap:8px;">
+                <div style="flex:1;">
+                    <strong style="color:var(--z-primary);">${emp.nombre}</strong>
+                    <span style="font-size:0.82rem;color:var(--z-text2);margin-left:8px;">CUIT: ${emp.cuit}</span>
+                </div>
+                <button class="z-btn z-btn--xs z-btn--primary" data-idx="${i}" data-action="editar">✏️ Editar</button>
+                <button class="z-btn z-btn--xs z-btn--ghost"   data-idx="${i}" data-action="consultar">👁 Ver</button>
+            </div>
+        `).join('');
+
+        els.resultList.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            const emp = resultados[parseInt(btn.dataset.idx)];
+            state.empresaEncontrada = emp;
+            if (btn.dataset.action === 'editar') activarModoEdicion(emp);
+            else activarModoConsulta(emp);
+        }, { once: true });
+
+        els.searchResult.classList.add('visible');
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // LOOKUP CUIT (auto-check si ya existe)
+    // ─────────────────────────────────────────────────────────
+    async function buscarPorCuitExistente(cuit) {
+        try {
+            const r = await ZUtils.verificarDuplicado('empresas', 'cuit', cuit, state.empresaId);
+            if (r.existe) {
+                ZUtils.toast(`⚠️ CUIT ya registrado: "${r.nombre}". Cargando datos...`, 'warning', 5000);
+                // Traer datos completos y pre-cargar formulario
+                const emp = await ZUtils.apiFetch(`/empresas/${r.id}`);
+                state.empresaEncontrada = emp;
+                activarModoEdicion(emp);
+            }
+        } catch { /* silencioso */ }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // MODOS
+    // ─────────────────────────────────────────────────────────
+    function setFormReadonly(readonly) {
+        els.formEmpresa.querySelectorAll('.z-input, .z-select, .z-textarea').forEach(el => {
+            if (el.type === 'hidden') return;
+            el.readOnly = readonly;
+            el.disabled = readonly;
+            el.style.background = readonly ? '#F5F5F5' : '';
+            el.style.cursor     = readonly ? 'not-allowed' : '';
+        });
+        els.btnGuardar.style.display  = readonly ? 'none' : '';
+        els.claeFiltro.disabled = readonly;
+    }
+
     function activarModoNuevo() {
         state.mode = 'new';
         state.empresaId = null;
+        state.empresaEncontrada = null;
 
         els.formEmpresa.reset();
+        els.claeFiltro.value = '';
+        renderActividades('');
         els.formCard.style.display = 'block';
         els.formTitle.textContent = 'Alta de Empresa';
         els.formState.className = 'z-form-state z-form-state--new';
@@ -165,37 +314,81 @@ document.addEventListener('DOMContentLoaded', () => {
         els.badgeCategoria.style.display = 'none';
         els.searchResult.classList.remove('visible');
         els.obsCount.textContent = '0';
+        setFormReadonly(false);
 
-        // Limpiar validaciones
         els.formEmpresa.querySelectorAll('.z-input, .z-select, .z-textarea').forEach(el => {
             ZValidaciones.limpiarCampo(el);
         });
 
-        setTimeout(() => {
-            els.formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
-
-        document.getElementById('emp-cuit').focus();
+        setTimeout(() => els.formCard.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+        setTimeout(() => document.getElementById('emp-cuit').focus(), 150);
     }
 
-    // ── Modo Edición ──
-    function activarModoEdicion() {
+    function activarModoEdicion(empresa) {
         state.mode = 'edit';
+        state.empresaId = empresa ? empresa.id_empresa : null;
+
+        els.formEmpresa.reset();
+        els.claeFiltro.value = '';
+        renderActividades('');
         els.formCard.style.display = 'block';
         els.formTitle.textContent = 'Modificar Empresa';
         els.formState.className = 'z-form-state z-form-state--edit';
         els.formState.textContent = '✏️ EDICIÓN';
+        els.searchResult.classList.remove('visible');
+        setFormReadonly(false);
 
-        setTimeout(() => {
-            els.formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
+        if (empresa) poblarFormulario(empresa);
+
+        setTimeout(() => els.formCard.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     }
 
-    // ── Validar CUIT ──
+    function activarModoConsulta(empresa) {
+        state.mode = 'view';
+        state.empresaId = empresa ? empresa.id_empresa : null;
+        state.empresaEncontrada = empresa;
+
+        els.formEmpresa.reset();
+        els.claeFiltro.value = '';
+        renderActividades('');
+        els.formCard.style.display = 'block';
+        els.formTitle.textContent = 'Consulta de Empresa';
+        els.formState.className = 'z-form-state z-form-state--view';
+        els.formState.textContent = '👁 CONSULTA';
+        els.searchResult.classList.remove('visible');
+
+        if (empresa) poblarFormulario(empresa);
+        setFormReadonly(true);
+
+        setTimeout(() => els.formCard.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    }
+
+    function poblarFormulario(empresa) {
+        document.getElementById('emp-id').value          = empresa.id_empresa || '';
+        document.getElementById('emp-cuit').value        = empresa.cuit || '';
+        document.getElementById('emp-nombre').value      = empresa.nombre || '';
+        document.getElementById('emp-calle').value       = empresa.calle || '';
+        document.getElementById('emp-localidad').value   = empresa.localidad || '';
+        document.getElementById('emp-provincia').value   = empresa.provincia || '';
+        document.getElementById('emp-latitud').value     = empresa.latitud || '';
+        document.getElementById('emp-longitud').value    = empresa.longitud || '';
+        document.getElementById('emp-telefono').value    = empresa.telefono || '';
+        document.getElementById('emp-email').value       = empresa.email || '';
+        document.getElementById('emp-observaciones').value = empresa.observaciones || '';
+        els.obsCount.textContent = (empresa.observaciones || '').length;
+
+        if (empresa.id_actividad) {
+            els.selActividad.value = empresa.id_actividad;
+            actualizarBadgeCategoria();
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // VALIDAR CUIT
+    // ─────────────────────────────────────────────────────────
     function handleValidarCuit() {
         const input = document.getElementById('emp-cuit');
         const result = ZValidaciones.validarCuilCuit(input.value);
-
         if (result.valido) {
             input.value = result.formateado;
             ZValidaciones.marcarCampo(input, true);
@@ -207,21 +400,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function formatCuitInput(e) {
-        let val = e.target.value.replace(/[^0-9-]/g, '');
-        const digits = val.replace(/-/g, '');
-        if (digits.length >= 2 && digits.length <= 10) {
+        const digits = e.target.value.replace(/\D/g, '');
+        let val = digits;
+        if (digits.length > 2 && digits.length <= 10) {
             val = digits.substring(0, 2) + '-' + digits.substring(2);
-        } else if (digits.length >= 11) {
+        } else if (digits.length > 10) {
             val = digits.substring(0, 2) + '-' + digits.substring(2, 10) + '-' + digits.substring(10, 11);
         }
         e.target.value = val;
     }
 
-    // ── Guardar ──
+    // ─────────────────────────────────────────────────────────
+    // GUARDAR
+    // ─────────────────────────────────────────────────────────
     async function handleGuardar() {
         const { valido, errores } = ZValidaciones.validarFormulario(els.formEmpresa);
 
-        // Validaciones específicas
+        // CUIT
         const cuit = document.getElementById('emp-cuit').value;
         if (cuit) {
             const cuitResult = ZValidaciones.validarCuilCuit(cuit);
@@ -231,18 +426,36 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Email formato
         const email = document.getElementById('emp-email').value;
         if (email && !ZValidaciones.validarEmail(email)) {
             ZValidaciones.marcarCampo(document.getElementById('emp-email'), false, 'Formato de email inválido');
             errores.push('Email inválido');
         }
 
+        // Teléfono
         const telefono = document.getElementById('emp-telefono').value;
         if (telefono) {
             const telResult = ZValidaciones.validarTelefono(telefono);
             if (!telResult.valido) {
                 ZValidaciones.marcarCampo(document.getElementById('emp-telefono'), false, telResult.error);
                 errores.push('Teléfono inválido');
+            }
+        }
+
+        // Verificar duplicados email/tel en tiempo real
+        if (email) {
+            const rEmail = await ZUtils.verificarDuplicado('empresas', 'email', email, state.empresaId);
+            if (rEmail.existe) {
+                ZValidaciones.marcarCampo(document.getElementById('emp-email'), false, `Ya registrado en: ${rEmail.nombre}`);
+                errores.push('Email duplicado');
+            }
+        }
+        if (telefono && telefono.length >= 8) {
+            const rTel = await ZUtils.verificarDuplicado('empresas', 'telefono', telefono, state.empresaId);
+            if (rTel.existe) {
+                ZValidaciones.marcarCampo(document.getElementById('emp-telefono'), false, `Ya registrado en: ${rTel.nombre}`);
+                errores.push('Teléfono duplicado');
             }
         }
 
@@ -260,65 +473,33 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cuitResult.valido) data.cuit = cuitResult.formateado;
 
         try {
-            const response = await ZUtils.apiFetch('/empresas', {
-                method: 'POST',
-                body: JSON.stringify(data)
-            });
+            const isEdit  = state.mode === 'edit' && state.empresaId;
+            const endpoint = isEdit ? `/empresas/${state.empresaId}` : '/empresas';
+            const method   = isEdit ? 'PUT' : 'POST';
 
-            state.empresaId = response.id_empresa;
-            ZUtils.toast('Empresa guardada exitosamente (ID: ' + response.id_empresa + ')', 'success');
+            const response = await ZUtils.apiFetch(endpoint, { method, body: JSON.stringify(data) });
+            state.empresaId = response.id_empresa || state.empresaId;
 
-            setTimeout(() => {
-                if (confirm('¿Deseas dar de alta otra empresa?')) {
-                    activarModoNuevo();
-                } else {
-                    window.location.href = 'menu.html';
-                }
-            }, 1000);
+            const accion = isEdit ? 'actualizada' : 'guardada';
+            ZUtils.modalGuardado(
+                `Empresa ${accion}`,
+                `${response.nombre || data.nombre} — ID: ${state.empresaId}`,
+                () => activarModoNuevo(),
+                () => { window.location.href = 'menu.html'; }
+            );
         } catch (err) {
             ZUtils.toast(`Error al guardar: ${err.message}`, 'error');
         }
     }
 
-    // ── Cancelar ──
+    // ─────────────────────────────────────────────────────────
+    // CANCELAR
+    // ─────────────────────────────────────────────────────────
     async function handleCancelar() {
         const confirmed = await ZUtils.confirm(
             '¿Salir del formulario?',
             'Los datos no guardados se perderán. ¿Estás seguro que deseas salir?'
         );
-        if (confirmed) {
-            window.location.href = 'menu.html';
-        }
-    }
-
-    // ── Datos de actividades ──
-    function getActividadesData() {
-        return [
-            {id:1,codigo_clae:471100,descripcion:'Venta menor - alimentos (no especializados)',categoria_tasa:'comercio'},
-            {id:2,codigo_clae:472100,descripcion:'Venta menor - alimentos (especializados)',categoria_tasa:'comercio'},
-            {id:3,codigo_clae:473000,descripcion:'Venta menor - combustibles',categoria_tasa:'comercio'},
-            {id:4,codigo_clae:475100,descripcion:'Venta menor - textiles',categoria_tasa:'comercio'},
-            {id:5,codigo_clae:476100,descripcion:'Venta menor - libros/papelería',categoria_tasa:'comercio'},
-            {id:6,codigo_clae:477100,descripcion:'Venta menor - prendas de vestir',categoria_tasa:'comercio'},
-            {id:7,codigo_clae:478100,descripcion:'Venta menor - alimentos móviles',categoria_tasa:'comercio'},
-            {id:8,codigo_clae:461000,descripcion:'Venta mayor - retribución/contrata',categoria_tasa:'comercio'},
-            {id:9,codigo_clae:551000,descripcion:'Alojamiento hotelero',categoria_tasa:'servicios'},
-            {id:10,codigo_clae:561000,descripcion:'Restaurantes y expendio de comidas',categoria_tasa:'servicios'},
-            {id:11,codigo_clae:620100,descripcion:'Programación informática',categoria_tasa:'servicios'},
-            {id:12,codigo_clae:631100,descripcion:'Procesamiento de datos',categoria_tasa:'servicios'},
-            {id:13,codigo_clae:641900,descripcion:'Intermediación monetaria',categoria_tasa:'servicios'},
-            {id:14,codigo_clae:681000,descripcion:'Actividades inmobiliarias',categoria_tasa:'servicios'},
-            {id:15,codigo_clae:691000,descripcion:'Actividades jurídicas',categoria_tasa:'servicios'},
-            {id:16,codigo_clae:692000,descripcion:'Contabilidad y auditoría',categoria_tasa:'servicios'},
-            {id:17,codigo_clae:711000,descripcion:'Arquitectura e ingeniería',categoria_tasa:'servicios'},
-            {id:18,codigo_clae:750000,descripcion:'Actividades veterinarias',categoria_tasa:'servicios'},
-            {id:19,codigo_clae:851000,descripcion:'Enseñanza inicial y primaria',categoria_tasa:'servicios'},
-            {id:20,codigo_clae:862000,descripcion:'Médicos y odontólogos',categoria_tasa:'servicios'},
-            {id:21,codigo_clae:101000,descripcion:'Elaboración de carne',categoria_tasa:'industria'},
-            {id:22,codigo_clae:105000,descripcion:'Productos lácteos',categoria_tasa:'industria'},
-            {id:23,codigo_clae:110000,descripcion:'Elaboración de bebidas',categoria_tasa:'industria'},
-            {id:24,codigo_clae:251100,descripcion:'Productos metálicos estructurales',categoria_tasa:'industria'},
-            {id:25,codigo_clae:310000,descripcion:'Muebles y colchones',categoria_tasa:'industria'}
-        ];
+        if (confirmed) window.location.href = 'menu.html';
     }
 });
