@@ -112,23 +112,23 @@
             font-size: 0.75rem;
             font-weight: 600;
             color: var(--z-text2);
-            cursor: pointer;
+            cursor: default;          /* indicador, sin interacción del usuario */
             user-select: none;
             padding: 2px 6px;
             border-radius: 6px;
             border: 1px solid var(--z-border);
             background: var(--z-bg);
-            transition: all 0.15s;
         }
-        .z-check-validate:hover { background: #E8F5E9; border-color: #66BB6A; color: #2E7D32; }
+        .z-check-validate:hover { background: var(--z-bg); border-color: var(--z-border); color: var(--z-text2); }
         .z-check-validate input[type="checkbox"] {
             width: 13px;
             height: 13px;
             accent-color: #2E7D32;
-            cursor: pointer;
+            cursor: default;
+            pointer-events: none;    /* sin interacción del usuario */
             flex-shrink: 0;
         }
-        .z-check-validate input[type="checkbox"]:checked + span { color: #2E7D32; }
+        .z-check-validate input[type="checkbox"]:checked + span { color: #2E7D32; font-weight: 700; }
         .z-btn--xs {
             padding: 5px 10px;
             font-size: 0.72rem;
@@ -240,8 +240,8 @@
                                 <div class="z-validate-group">
                                     <input type="text" class="z-input" id="cid-doc-nro" name="doc_nro"
                                            placeholder="Ej: 30123456" maxlength="10">
-                                    <label class="z-check-validate" for="cid-dni-validado" title="Marcar si el documento fue verificado">
-                                        <input type="checkbox" id="cid-dni-validado" name="ren_chk">
+                                    <label class="z-check-validate" for="cid-dni-validado" title="Validado por proceso batch">
+                                        <input type="checkbox" id="cid-dni-validado" name="ren_chk" disabled>
                                         <span>Validado</span>
                                     </label>
                                     <button type="button" class="z-btn z-btn--ghost z-btn--xs" id="btn-validar-dni"
@@ -255,8 +255,8 @@
                                 <div class="z-validate-group">
                                     <input type="text" class="z-input" id="cid-cuil" name="cuil"
                                            placeholder="XX-XXXXXXXX-X" maxlength="13">
-                                    <label class="z-check-validate" for="cid-cuil-validado" title="Marcar si el CUIL fue verificado">
-                                        <input type="checkbox" id="cid-cuil-validado">
+                                    <label class="z-check-validate" for="cid-cuil-validado" title="Validado por proceso batch">
+                                        <input type="checkbox" id="cid-cuil-validado" disabled>
                                         <span>Validado</span>
                                     </label>
                                     <button type="button" class="z-btn z-btn--ghost z-btn--xs" id="btn-validar-cuil"
@@ -357,8 +357,8 @@
                                 <div class="z-validate-group">
                                     <input type="email" class="z-input" id="cid-email" name="email"
                                            placeholder="ejemplo@correo.com" maxlength="150" required>
-                                    <label class="z-check-validate" for="cid-email-verificado" title="Marcar si el email fue verificado">
-                                        <input type="checkbox" id="cid-email-verificado" name="email_chk">
+                                    <label class="z-check-validate" for="cid-email-verificado" title="Verificado por proceso batch">
+                                        <input type="checkbox" id="cid-email-verificado" name="email_chk" disabled>
                                         <span>Verificado</span>
                                     </label>
                                 </div>

@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Nuevo
         els.btnNuevo.addEventListener('click', () => activarModoNuevo());
         els.btnNuevoForzar.addEventListener('click', () => activarModoNuevo());
-        els.btnEditarEncontrado.addEventListener('click', () => activarModoEdicion());
+        els.btnEditarEncontrado.addEventListener('click', () => activarModoEdicion(state.ciudadanoEncontrado));
 
         // DNI → auto-calcula CUIL (si CUIL no fue editado manualmente)
         const dniInput = document.getElementById('cid-doc-nro');
@@ -300,12 +300,60 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ── Modo Edición ──
-    function activarModoEdicion() {
+    function activarModoEdicion(ciudadano) {
         state.mode = 'edit';
+        state.ciudadanoId = ciudadano ? ciudadano.id_ciudadano : null;
+        state.ciudadanoGuardado = false;
+
+        els.formCiudadano.reset();
         els.formCard.style.display = 'block';
         els.formTitle.textContent = 'Modificar Ciudadano';
         els.formState.className = 'z-form-state z-form-state--edit';
         els.formState.textContent = '✏️ EDICIÓN';
+        els.empresaPanel.classList.remove('open');
+        els.searchResult.classList.remove('visible');
+
+        // Limpiar estado manual del CUIL
+        const cuilInput = document.getElementById('cid-cuil');
+        delete cuilInput.dataset.manualInput;
+
+        if (ciudadano) {
+            // Datos Hidden
+            document.getElementById('cid-id').value = ciudadano.id_ciudadano || '';
+
+            // Identificación
+            document.getElementById('cid-doc-tipo').value  = ciudadano.doc_tipo  || '';
+            document.getElementById('cid-doc-nro').value   = ciudadano.doc_nro   || '';
+            cuilInput.value = ciudadano.cuil || '';
+
+            // Indicadores de validación (set programmáticamente, no interactivos)
+            document.getElementById('cid-dni-validado').checked   = !!ciudadano.ren_chk;
+            document.getElementById('cid-cuil-validado').checked  = !!ciudadano.cuil_chk;
+            document.getElementById('cid-email-verificado').checked = !!ciudadano.email_chk;
+
+            // Datos Personales
+            document.getElementById('cid-nombre').value    = ciudadano.nombre    || '';
+            document.getElementById('cid-apellido').value  = ciudadano.apellido  || '';
+            document.getElementById('cid-sexo').value      = ciudadano.sexo      || '';
+            document.getElementById('cid-fecha-nac').value = ciudadano.fecha_nac
+                ? ciudadano.fecha_nac.substring(0, 10) : '';
+            document.getElementById('cid-nacionalidad').value = ciudadano.id_nacionalidad || '';
+
+            // Domicilio
+            document.getElementById('cid-calle').value     = ciudadano.calle     || '';
+            document.getElementById('cid-localidad').value = ciudadano.localidad  || '';
+            document.getElementById('cid-provincia').value = ciudadano.provincia  || '';
+            document.getElementById('cid-latitud').value   = ciudadano.latitud   || '';
+            document.getElementById('cid-longitud').value  = ciudadano.longitud  || '';
+
+            // Contacto
+            document.getElementById('cid-telefono').value  = ciudadano.telefono  || '';
+            document.getElementById('cid-email').value     = ciudadano.email     || '';
+
+            // Observaciones
+            document.getElementById('cid-observaciones').value = ciudadano.observaciones || '';
+            els.obsCount.textContent = (ciudadano.observaciones || '').length;
+        }
 
         setTimeout(() => {
             els.formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -365,12 +413,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData(els.formCiudadano);
         const data = Object.fromEntries(formData.entries());
 
-        // Checkboxes: FormData incluye solo los checked, completar los false
-        data.emp_chk = els.empChk.checked;
-        data.ren_chk  = document.getElementById('cid-dni-validado').checked;
+        // Checkboxes disabled: FormData no los incluye → leer con .checked directamente
+        data.emp_chk   = els.empChk.checked;
+        data.ren_chk   = document.getElementById('cid-dni-validado').checked;
         data.email_chk = document.getElementById('cid-email-verificado').checked;
-        // cuil-validado es solo UI, no se envía al backend
-        delete data['cid-cuil-validado'];
 
         const cuilFinal = document.getElementById('cid-cuil').value.trim();
         const dniNro   = document.getElementById('cid-doc-nro').value.trim();
@@ -387,15 +433,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const response = await ZUtils.apiFetch('/ciudadanos', {
-                method: 'POST',
+            const isEdit = state.mode === 'edit' && state.ciudadanoId;
+            const endpoint = isEdit ? `/ciudadanos/${state.ciudadanoId}` : '/ciudadanos';
+            const method   = isEdit ? 'PUT' : 'POST';
+
+            const response = await ZUtils.apiFetch(endpoint, {
+                method,
                 body: JSON.stringify(data)
             });
 
-            state.ciudadanoId = response.id_ciudadano;
+            state.ciudadanoId = response.id_ciudadano || state.ciudadanoId;
             state.ciudadanoGuardado = true;
 
-            ZUtils.toast('Ciudadano guardado exitosamente (ID: ' + response.id_ciudadano + ')', 'success');
+            const msgAccion = isEdit ? 'actualizado' : 'guardado';
+            ZUtils.toast(`Ciudadano ${msgAccion} exitosamente (ID: ${state.ciudadanoId})`, 'success');
 
             // Si emp_chk está marcado, desplegar panel empresa
             if (els.empChk.checked) {
@@ -404,8 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => {
                     els.empresaPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }, 400);
-            } else {
-                // Volver al menú o limpiar para siguiente alta
+            } else if (!isEdit) {
                 setTimeout(() => {
                     if (confirm('¿Deseas dar de alta otro ciudadano?')) {
                         activarModoNuevo();
