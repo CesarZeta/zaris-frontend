@@ -513,6 +513,15 @@ document.addEventListener('DOMContentLoaded', () => {
             els.empChk.style.cursor = readonly ? 'not-allowed' : '';
         }
         els.btnGuardar.style.display = readonly ? 'none' : '';
+        // En modo solo lectura (consulta): cambiar botón Cancelar por Salir al Menú
+        if (readonly) {
+            els.btnCancelar.textContent = '↗ Salir al Menú';
+            els.btnCancelar.className = 'z-btn z-btn--ghost';
+            els.btnCancelar.onclick = () => { window.location.href = 'menu.html'; };
+        } else {
+            els.btnCancelar.innerHTML = '✕ Cancelar';
+            els.btnCancelar.onclick = null;  // restaura el listener original
+        }
     }
     // ── Modo Edición ──
     function activarModoEdicion(ciudadano) {
@@ -594,13 +603,14 @@ document.addEventListener('DOMContentLoaded', () => {
             els.empresaPanel.classList.add('open');
 
             const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
-            set('ev-cuit',      emp.cuit);
-            set('ev-nombre',    emp.nombre);
-            set('ev-calle',     emp.calle);
-            set('ev-localidad', emp.localidad);
-            set('ev-provincia', emp.provincia);
-            set('ev-telefono',  emp.telefono);
-            set('ev-email',     emp.email);
+            set('ev-cuit',          emp.cuit);
+            set('ev-nombre',        emp.nombre);
+            set('ev-calle',         emp.calle);
+            set('ev-localidad',     emp.localidad);
+            set('ev-provincia',     emp.provincia);
+            set('ev-telefono',      emp.telefono);
+            set('ev-email',         emp.email);
+            set('ev-observaciones', emp.observaciones);  // ← incluir observaciones
             const selAct = document.getElementById('ev-actividad');
             if (selAct && emp.id_actividad) selAct.value = emp.id_actividad;
             const selTipoRep = document.getElementById('ev-tipo-rep');
@@ -670,32 +680,35 @@ document.addEventListener('DOMContentLoaded', () => {
             ZValidaciones.marcarCampo(document.getElementById('cid-cuil'), false, 'Ingresá el CUIL o el DNI');
         }
 
-        // ── Verificar duplicados email/tel ──
+        // ── Verificar duplicados email/tel — solo en ALTA (en edición se omite) ──
         const email    = document.getElementById('cid-email').value;
         const telefono = document.getElementById('cid-telefono').value;
-        if (email) {
-            const rVal = ZValidaciones.validarEmail(email);
-            if (!rVal) {
-                ZValidaciones.marcarCampo(document.getElementById('cid-email'), false, 'Formato de email inválido');
-                errores.push('Email inválido');
-            } else {
-                const rDup = await ZUtils.verificarDuplicado('ciudadanos', 'email', email, state.ciudadanoId);
-                if (rDup.existe) {
-                    ZValidaciones.marcarCampo(document.getElementById('cid-email'), false, `Ya registrado: ${rDup.nombre}`);
-                    errores.push('Email duplicado');
+        const isEditGuard = state.mode === 'edit' && state.ciudadanoId;
+        if (!isEditGuard) {
+            if (email) {
+                const rVal = ZValidaciones.validarEmail(email);
+                if (!rVal) {
+                    ZValidaciones.marcarCampo(document.getElementById('cid-email'), false, 'Formato de email inválido');
+                    errores.push('Email inválido');
+                } else {
+                    const rDup = await ZUtils.verificarDuplicado('ciudadanos', 'email', email, state.ciudadanoId);
+                    if (rDup.existe) {
+                        ZValidaciones.marcarCampo(document.getElementById('cid-email'), false, `Ya registrado: ${rDup.nombre}`);
+                        errores.push('Email duplicado');
+                    }
                 }
             }
-        }
-        if (telefono) {
-            const telResult = ZValidaciones.validarTelefono(telefono);
-            if (!telResult.valido) {
-                ZValidaciones.marcarCampo(document.getElementById('cid-telefono'), false, telResult.error);
-                errores.push('Teléfono inválido');
-            } else {
-                const rDup = await ZUtils.verificarDuplicado('ciudadanos', 'telefono', telefono, state.ciudadanoId);
-                if (rDup.existe) {
-                    ZValidaciones.marcarCampo(document.getElementById('cid-telefono'), false, `Ya registrado: ${rDup.nombre}`);
-                    errores.push('Teléfono duplicado');
+            if (telefono) {
+                const telResult = ZValidaciones.validarTelefono(telefono);
+                if (!telResult.valido) {
+                    ZValidaciones.marcarCampo(document.getElementById('cid-telefono'), false, telResult.error);
+                    errores.push('Teléfono inválido');
+                } else {
+                    const rDup = await ZUtils.verificarDuplicado('ciudadanos', 'telefono', telefono, state.ciudadanoId);
+                    if (rDup.existe) {
+                        ZValidaciones.marcarCampo(document.getElementById('cid-telefono'), false, `Ya registrado: ${rDup.nombre}`);
+                        errores.push('Teléfono duplicado');
+                    }
                 }
             }
         }

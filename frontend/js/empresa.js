@@ -211,8 +211,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
+            // Para búsqueda numérica de CUIT: enviar con y sin guiones
+            let queryEnviar = query;
+            if (state.busquedaTipo === 'numero') {
+                // Strip guiones para búsqueda flexible
+                queryEnviar = query.replace(/-/g, '');
+            }
+
             const resultados = await ZUtils.apiFetch(
-                `/empresas/buscar?q=${encodeURIComponent(query)}&tipo=${state.busquedaTipo}`
+                `/empresas/buscar?q=${encodeURIComponent(queryEnviar)}&tipo=${state.busquedaTipo}`
             );
             if (resultados.length === 0) {
                 ZUtils.toast('No se encontró ninguna empresa con esos datos.', 'info');
@@ -301,6 +308,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         els.btnGuardar.style.display  = readonly ? 'none' : '';
         els.claeFiltro.disabled = readonly;
+        // En modo consulta: cambiar Cancelar por Salir al Menú
+        if (readonly) {
+            els.btnCancelar.textContent = '↗ Salir al Menú';
+            els.btnCancelar.onclick = () => { window.location.href = 'menu.html'; };
+        } else {
+            els.btnCancelar.innerHTML = '✕ Cancelar';
+            els.btnCancelar.onclick = null;
+        }
     }
 
     function activarModoNuevo() {
@@ -447,19 +462,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Verificar duplicados email/tel en tiempo real
-        if (email) {
-            const rEmail = await ZUtils.verificarDuplicado('empresas', 'email', email, state.empresaId);
-            if (rEmail.existe) {
-                ZValidaciones.marcarCampo(document.getElementById('emp-email'), false, `Ya registrado en: ${rEmail.nombre}`);
-                errores.push('Email duplicado');
+        // Verificar duplicados email/tel — solo en ALTA (no en edición)
+        const isEditCheck = state.mode === 'edit' && state.empresaId;
+        if (!isEditCheck) {
+            if (email) {
+                const rEmail = await ZUtils.verificarDuplicado('empresas', 'email', email, state.empresaId);
+                if (rEmail.existe) {
+                    ZValidaciones.marcarCampo(document.getElementById('emp-email'), false, `Ya registrado en: ${rEmail.nombre}`);
+                    errores.push('Email duplicado');
+                }
             }
-        }
-        if (telefono && telefono.length >= 8) {
-            const rTel = await ZUtils.verificarDuplicado('empresas', 'telefono', telefono, state.empresaId);
-            if (rTel.existe) {
-                ZValidaciones.marcarCampo(document.getElementById('emp-telefono'), false, `Ya registrado en: ${rTel.nombre}`);
-                errores.push('Teléfono duplicado');
+            if (telefono && telefono.length >= 8) {
+                const rTel = await ZUtils.verificarDuplicado('empresas', 'telefono', telefono, state.empresaId);
+                if (rTel.existe) {
+                    ZValidaciones.marcarCampo(document.getElementById('emp-telefono'), false, `Ya registrado en: ${rTel.nombre}`);
+                    errores.push('Teléfono duplicado');
+                }
             }
         }
 
@@ -487,7 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const accion = isEdit ? 'actualizada' : 'guardada';
             ZUtils.modalGuardado(
                 `Empresa ${accion}`,
-                `${response.nombre || data.nombre} — ID: ${state.empresaId}`,
+                `${response.nombre || data.nombre}`,
                 () => activarModoNuevo(),
                 () => { window.location.href = 'menu.html'; }
             );
