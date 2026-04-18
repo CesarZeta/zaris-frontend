@@ -56,6 +56,27 @@ def _validar_email_fmt(valor: str) -> str:
 # USUARIOS
 # ═══════════════════════════════════════════════════════════════
 
+class UsuarioCreate(BaseModel):
+    nombre:       str = Field(..., max_length=150)
+    nivel_acceso: int = Field(..., ge=1, le=4)
+    username:     str = Field(..., max_length=50, pattern=r"^[a-zA-Z0-9_.\-]+$")
+    password:     str = Field(..., min_length=8, max_length=100)
+    id_cargo:     Optional[str] = Field(None, max_length=100)
+    id_municipio: int = Field(377)
+    cuil:         Optional[str] = Field(None, max_length=11)
+    buc_acceso:   bool = False
+
+
+class UsuarioUpdate(BaseModel):
+    nombre:       Optional[str] = Field(None, max_length=150)
+    nivel_acceso: Optional[int] = Field(None, ge=1, le=4)
+    id_cargo:     Optional[str] = Field(None, max_length=100)
+    id_municipio: Optional[int] = None
+    cuil:         Optional[str] = Field(None, max_length=11)
+    buc_acceso:   Optional[bool] = None
+    password:     Optional[str] = Field(None, min_length=8, max_length=100)
+
+
 class UsuarioOut(BaseModel):
     id_usuario:   int
     nombre:       str

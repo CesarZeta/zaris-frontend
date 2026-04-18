@@ -14,8 +14,10 @@ from app.models.buc import (
     Usuario, Nacionalidad, TipoRepresentacion, Actividad,
     Ciudadano, Empresa, CiudadanoEmpresa
 )
+from passlib.context import CryptContext
+
 from app.schemas.buc import (
-    UsuarioOut,
+    UsuarioCreate, UsuarioUpdate, UsuarioOut,
     NacionalidadOut, TipoRepresentacionOut, ActividadOut,
     CiudadanoCreate, CiudadanoUpdate, CiudadanoOut, CiudadanoConNacionalidad,
     EmpresaCreate, EmpresaUpdate, EmpresaOut, EmpresaConActividad,
@@ -24,11 +26,37 @@ from app.schemas.buc import (
 
 router = APIRouter(prefix="/api/v1/buc", tags=["BUC"])
 logger = logging.getLogger("zaris.buc")
+_pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 # ═══════════════════════════════════════════════════════════════
 # USUARIOS
 # ═══════════════════════════════════════════════════════════════
+
+@router.get("/usuarios/buscar", response_model=list[UsuarioOut])
+async def buscar_usuario(
+    q: str = Query(..., min_length=1, description="Nombre, username o CUIL"),
+    tipo: str = Query("auto", description="'numero' para CUIL/username, 'texto' para nombre, 'auto' para detectar"),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db)
+):
+    """Buscar usuarios por nombre, username o CUIL."""
+    es_numerico = tipo == "numero" or (tipo == "auto" and q.replace("-", "").isdigit())
+    if es_numerico:
+        cond = or_(
+            Usuario.cuil.ilike(f"%{q}%"),
+            Usuario.username.ilike(f"%{q}%"),
+        )
+    else:
+        cond = or_(
+            Usuario.nombre.ilike(f"%{q}%"),
+            Usuario.username.ilike(f"%{q}%"),
+        )
+    stmt = select(Usuario).where(cond).order_by(Usuario.nombre).offset(offset).limit(limit)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
 
 @router.get("/usuarios", response_model=list[UsuarioOut])
 async def listar_usuarios(
@@ -36,11 +64,82 @@ async def listar_usuarios(
     db: AsyncSession = Depends(get_db)
 ):
     """Listar usuarios del sistema (para selector modificado_por)."""
-    q = select(Usuario).order_by(Usuario.nombre)
+    stmt = select(Usuario).order_by(Usuario.nombre)
     if solo_activos:
-        q = q.where(Usuario.activo == True)
-    result = await db.execute(q)
+        stmt = stmt.where(Usuario.activo == True)
+    result = await db.execute(stmt)
     return result.scalars().all()
+
+
+@router.get("/usuarios/{id}", response_model=UsuarioOut)
+async def obtener_usuario(id: int, db: AsyncSession = Depends(get_db)):
+    """Obtener usuario por ID."""
+    result = await db.execute(select(Usuario).where(Usuario.id_usuario == id))
+    u = result.scalars().first()
+    if not u:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return u
+
+
+@router.post("/usuarios", response_model=UsuarioOut, status_code=201)
+async def crear_usuario(data: UsuarioCreate, db: AsyncSession = Depends(get_db)):
+    """Alta de usuario con contraseña hasheada (bcrypt)."""
+    existing = await db.execute(select(Usuario).where(Usuario.username == data.username))
+    if existing.scalars().first():
+        raise HTTPException(status_code=409, detail=f"Ya existe un usuario con username '{data.username}'")
+
+    data_dict = data.model_dump()
+    data_dict["password_hash"] = _pwd.hash(data_dict.pop("password"))
+
+    usuario = Usuario(**data_dict)
+    db.add(usuario)
+    await db.commit()
+    await db.refresh(usuario)
+    logger.info("ALTA usuario | id=%s | username=%s", usuario.id_usuario, usuario.username)
+    return usuario
+
+
+@router.put("/usuarios/{id}", response_model=UsuarioOut)
+async def modificar_usuario(id: int, data: UsuarioUpdate, db: AsyncSession = Depends(get_db)):
+    """Modificar datos de usuario. Si se envía 'password', se re-hashea."""
+    result = await db.execute(select(Usuario).where(Usuario.id_usuario == id))
+    usuario = result.scalars().first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    update_data = data.model_dump(exclude_unset=True)
+    if "password" in update_data:
+        update_data["password_hash"] = _pwd.hash(update_data.pop("password"))
+
+    campos_modificados = list(update_data.keys())
+    for field, value in update_data.items():
+        setattr(usuario, field, value)
+
+    await db.commit()
+    await db.refresh(usuario)
+    logger.info("MODIFICACION usuario | id=%s | username=%s | campos=%s",
+                usuario.id_usuario, usuario.username, campos_modificados)
+    return usuario
+
+
+@router.put("/usuarios/{id}/estado", response_model=UsuarioOut)
+async def cambiar_estado_usuario(
+    id: int,
+    activo: bool = Query(..., description="true para reactivar, false para dar de baja"),
+    db: AsyncSession = Depends(get_db)
+):
+    """Dar de alta o de baja a un usuario (soft delete)."""
+    result = await db.execute(select(Usuario).where(Usuario.id_usuario == id))
+    usuario = result.scalars().first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    usuario.activo = activo
+    await db.commit()
+    await db.refresh(usuario)
+    accion = "REACTIVACION" if activo else "BAJA"
+    logger.info("%s usuario | id=%s | username=%s", accion, usuario.id_usuario, usuario.username)
+    return usuario
 
 
 # ═══════════════════════════════════════════════════════════════

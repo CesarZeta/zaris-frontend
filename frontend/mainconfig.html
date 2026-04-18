@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ZARIS — Configuración del Sistema">
+    <title>ZARIS — Configuración</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .z-config-hero {
+            text-align: center;
+            padding: 2.5rem 1rem 1.5rem;
+            animation: z-fadeIn 0.5s var(--z-ease);
+        }
+        .z-config-hero__badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #4A148C, #7B1FA2);
+            color: #fff;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 4px 14px;
+            border-radius: 100px;
+            margin-bottom: 1rem;
+        }
+        .z-config-hero__title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--z-primary);
+            margin-bottom: 0.4rem;
+            letter-spacing: -0.03em;
+        }
+        .z-config-hero__desc {
+            font-size: 0.95rem;
+            color: var(--z-text2);
+            max-width: 480px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .z-config-index {
+            max-width: 700px;
+            margin: 2rem auto 0;
+            animation: z-scaleIn 0.4s var(--z-ease) 0.15s both;
+        }
+        .z-config-index__title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--z-text3);
+            padding: 0 0.25rem 0.6rem;
+            border-bottom: 1.5px solid var(--z-border);
+            margin-bottom: 0.75rem;
+        }
+
+        .z-config-item {
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+            padding: 1.2rem 1.4rem;
+            background: var(--z-bg-card);
+            border: 1.5px solid var(--z-border);
+            border-radius: var(--z-radius-lg);
+            margin-bottom: 0.75rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.25s var(--z-ease);
+            position: relative;
+            overflow: hidden;
+        }
+        .z-config-item::after {
+            content: '→';
+            position: absolute;
+            right: 1.4rem;
+            font-size: 1.1rem;
+            color: var(--z-text3);
+            transition: all 0.25s var(--z-ease);
+        }
+        .z-config-item:hover {
+            border-color: var(--z-primary-light);
+            box-shadow: var(--z-shadow-lg);
+            transform: translateX(4px);
+        }
+        .z-config-item:hover::after {
+            right: 1rem;
+            color: var(--z-primary);
+        }
+        .z-config-item--disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        .z-config-item__icon {
+            width: 52px;
+            height: 52px;
+            border-radius: var(--z-radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            flex-shrink: 0;
+        }
+        .z-config-item__icon--usuarios  { background: linear-gradient(135deg, #E8EAF6, #C5CAE9); }
+        .z-config-item__icon--future     { background: linear-gradient(135deg, #F5F5F5, #EEEEEE); }
+        .z-config-item__body { flex: 1; min-width: 0; }
+        .z-config-item__name {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--z-primary);
+            margin-bottom: 3px;
+        }
+        .z-config-item__desc {
+            font-size: 0.83rem;
+            color: var(--z-text2);
+            line-height: 1.45;
+        }
+        .z-config-item__badge {
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 100px;
+            background: #E8F5E9;
+            color: #2E7D32;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+        .z-config-item__badge--soon {
+            background: #FFF8E1;
+            color: #F57F17;
+        }
+
+        .z-footer-info {
+            text-align: center;
+            padding: 2rem;
+            color: var(--z-text3);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="z-app">
+        <header class="z-header">
+            <a href="menu.html" class="z-header__brand">
+                <span>
+                    <span class="z-header__title">ZARIS</span>
+                    <span class="z-header__subtitle">Gestión Estatal</span>
+                </span>
+            </a>
+            <nav class="z-header__nav">
+                <a href="menu.html" class="z-header__btn">← Menú BUC</a>
+            </nav>
+        </header>
+
+        <main class="z-main">
+            <div class="z-config-hero">
+                <span class="z-config-hero__badge">⚙️ Configuración del Sistema</span>
+                <h1 class="z-config-hero__title">Administración General</h1>
+                <p class="z-config-hero__desc">
+                    Parámetros, tablas maestras y configuraciones del módulo BUC.
+                </p>
+            </div>
+
+            <div class="z-config-index">
+                <div class="z-config-index__title">Índice de configuración</div>
+
+                <!-- Ítem 1: Padrón Usuarios -->
+                <a href="usuarios.html" class="z-config-item">
+                    <div class="z-config-item__icon z-config-item__icon--usuarios">👥</div>
+                    <div class="z-config-item__body">
+                        <div class="z-config-item__name">
+                            Padrón Usuarios
+                            <span class="z-config-item__badge">Activo</span>
+                        </div>
+                        <div class="z-config-item__desc">
+                            Alta, baja y modificación de usuarios del sistema. Asignación de niveles de acceso y permisos BUC.
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Ítem 2: Placeholder futuro -->
+                <div class="z-config-item z-config-item--disabled">
+                    <div class="z-config-item__icon z-config-item__icon--future">🗂️</div>
+                    <div class="z-config-item__body">
+                        <div class="z-config-item__name">
+                            Tipos de Representación
+                            <span class="z-config-item__badge z-config-item__badge--soon">Próximamente</span>
+                        </div>
+                        <div class="z-config-item__desc">
+                            Gestión de tipos de representación ciudadano-empresa.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ítem 3: Placeholder futuro -->
+                <div class="z-config-item z-config-item--disabled">
+                    <div class="z-config-item__icon z-config-item__icon--future">🏷️</div>
+                    <div class="z-config-item__body">
+                        <div class="z-config-item__name">
+                            Actividades CLAE
+                            <span class="z-config-item__badge z-config-item__badge--soon">Próximamente</span>
+                        </div>
+                        <div class="z-config-item__desc">
+                            Administración del catálogo de actividades económicas.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="z-footer-info">
+            ZARIS Gestión Estatal &copy; 2026 — Configuración del Sistema
+        </footer>
+    </div>
+</body>
+</html>
