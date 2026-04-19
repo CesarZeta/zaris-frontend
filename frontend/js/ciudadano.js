@@ -326,10 +326,9 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const r = await ZUtils.verificarDuplicado('ciudadanos', campo, valor, state.ciudadanoId);
                 if (r.existe) {
-                    ZUtils.toast(`⚠️ ${campo === 'cuil' ? 'CUIL' : 'DNI'} ya registrado: "${r.nombre}". Cargando datos...`, 'warning', 5000);
+                    ZUtils.toast(`⚠️ ${campo === 'cuil' ? 'CUIL' : 'DNI'} ya registrado: "${r.nombre}". Usá Consultar o Modificar para traer los datos.`, 'warning', 6000);
                     const ciudadano = await ZUtils.apiFetch(`/ciudadanos/${r.id}`);
-                    state.ciudadanoEncontrado = ciudadano;
-                    activarModoEdicion(ciudadano);
+                    mostrarResultadoUnico(ciudadano);
                 }
             } catch { /* silencioso */ }
         }, 800);

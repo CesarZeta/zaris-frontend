@@ -286,11 +286,9 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const r = await ZUtils.verificarDuplicado('empresas', 'cuit', cuit, state.empresaId);
             if (r.existe) {
-                ZUtils.toast(`⚠️ CUIT ya registrado: "${r.nombre}". Cargando datos...`, 'warning', 5000);
-                // Traer datos completos y pre-cargar formulario
+                ZUtils.toast(`⚠️ CUIT ya registrado: "${r.nombre}". Usá Consultar o Modificar para traer los datos.`, 'warning', 6000);
                 const emp = await ZUtils.apiFetch(`/empresas/${r.id}`);
-                state.empresaEncontrada = emp;
-                activarModoEdicion(emp);
+                mostrarResultadoUnico(emp);
             }
         } catch { /* silencioso */ }
     }
