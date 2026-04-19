@@ -178,6 +178,9 @@ document.addEventListener('DOMContentLoaded', () => {
         els.obsTextarea.addEventListener('input', () => {
             els.obsCount.textContent = els.obsTextarea.value.length;
         });
+
+        // Guardar disabled hasta que el form esté completo
+        state.checkGuardar = ZValidaciones.bindGuardarBoton(els.formEmpresa, els.btnGuardar).check;
     }
 
     // ─────────────────────────────────────────────────────────
@@ -339,6 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setTimeout(() => els.formCard.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
         setTimeout(() => document.getElementById('emp-cuit').focus(), 150);
+        state.checkGuardar && state.checkGuardar();
     }
 
     function activarModoEdicion(empresa) {
@@ -358,6 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (empresa) poblarFormulario(empresa);
 
         setTimeout(() => els.formCard.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+        state.checkGuardar && state.checkGuardar();
     }
 
     function activarModoConsulta(empresa) {

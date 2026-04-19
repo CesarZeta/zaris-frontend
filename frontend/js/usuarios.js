@@ -72,6 +72,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         els.btnModoTexto.addEventListener('click', () => setModoBusqueda('texto'));
         els.btnModoNumero.addEventListener('click', () => setModoBusqueda('numero'));
+
+        // Guardar disabled hasta que el form esté completo
+        // (required + password rules según modo nuevo/edicion)
+        state.checkGuardar = ZValidaciones.bindGuardarBoton(els.formCard, els.btnGuardar, {
+            extra: () => {
+                const pwd = els.password.value;
+                const cf  = els.passwordConfirm.value;
+                if (state.modo === 'nuevo') {
+                    if (!pwd || pwd.length < 8) return false;
+                    if (pwd !== cf) return false;
+                } else if (state.modo === 'edicion') {
+                    if (pwd) {
+                        if (pwd.length < 8) return false;
+                        if (pwd !== cf) return false;
+                    }
+                }
+                return true;
+            }
+        }).check;
     }
 
     function setModoBusqueda(tipo) {
@@ -218,6 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
         els.btnReactivar.style.display = 'none';
         els.btnCancelar.textContent    = '✕ Cancelar';
         els.nombre.focus();
+        state.checkGuardar && state.checkGuardar();
     }
 
     function activarModoEdicion() {
@@ -247,6 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
             els.btnBaja.style.display      = 'none';
             els.btnReactivar.style.display = 'inline-flex';
         }
+        state.checkGuardar && state.checkGuardar();
     }
 
     function activarModoConsulta() {

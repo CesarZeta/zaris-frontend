@@ -171,5 +171,54 @@ const ZValidaciones = {
         });
 
         return { valido: errores.length === 0, errores };
+    },
+
+    /**
+     * Verifica si todos los campos [required] visibles del contenedor están
+     * completos y con formato válido (CUIL/CUIT, email, teléfono, documento).
+     * @param {HTMLElement} containerEl
+     * @param {object} [opts] - { extra: (containerEl) => boolean }
+     * @returns {boolean}
+     */
+    formularioCompleto(containerEl, opts = {}) {
+        const required = containerEl.querySelectorAll('[required]');
+        for (const f of required) {
+            if (f.disabled) continue;
+            const val = (f.value || '').trim();
+            if (!val) return false;
+            const id = f.id || '';
+            if (id.endsWith('-cuit') || id.endsWith('-cuil') || f.dataset.validate === 'cuilcuit') {
+                if (!this.validarCuilCuit(val).valido) return false;
+            } else if (id.endsWith('-telefono') || f.dataset.validate === 'telefono') {
+                if (!this.validarTelefono(val).valido) return false;
+            } else if (f.type === 'email' || f.dataset.validate === 'email') {
+                if (!this.validarEmail(val)) return false;
+            } else if (id.endsWith('-doc-nro') || f.dataset.validate === 'documento') {
+                if (!this.validarDocumento(val)) return false;
+            }
+        }
+        if (typeof opts.extra === 'function' && !opts.extra(containerEl)) return false;
+        return true;
+    },
+
+    /**
+     * Liga un botón "Guardar" a un contenedor: deshabilita hasta que todos
+     * los [required] estén completos y con formato válido. Cambios programáticos
+     * de campos requieren llamar manualmente al check devuelto.
+     * @param {HTMLElement} containerEl
+     * @param {HTMLButtonElement} btnEl
+     * @param {object} [opts] - { extra }
+     * @returns {{ check: () => void }}
+     */
+    bindGuardarBoton(containerEl, btnEl, opts = {}) {
+        const check = () => {
+            const ok = this.formularioCompleto(containerEl, opts);
+            btnEl.disabled = !ok;
+            btnEl.title = ok ? '' : 'Completá todos los campos obligatorios para guardar';
+        };
+        containerEl.addEventListener('input', check);
+        containerEl.addEventListener('change', check);
+        check();
+        return { check };
     }
 };

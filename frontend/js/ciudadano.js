@@ -200,6 +200,9 @@ document.addEventListener('DOMContentLoaded', () => {
         els.btnGuardar.addEventListener('click', handleGuardar);
         els.btnCancelar.addEventListener('click', handleCancelar);
 
+        // Guardar disabled hasta que el form esté completo
+        state.checkGuardar = ZValidaciones.bindGuardarBoton(els.formCiudadano, els.btnGuardar).check;
+
         // Empresa
         els.btnGuardarEmpresa.addEventListener('click', handleGuardarEmpresa);
         els.btnCancelarEmpresa.addEventListener('click', handleCancelarEmpresa);
@@ -441,6 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setTimeout(() => els.formCard.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
         setTimeout(() => document.getElementById('cid-doc-tipo').focus(), 150);
+        state.checkGuardar && state.checkGuardar();
     }
 
     // ── Modo Consulta (solo lectura) ──
@@ -540,6 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (ciudadano) poblarFormulario(ciudadano);
 
         setTimeout(() => els.formCard.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+        state.checkGuardar && state.checkGuardar();
 
         if (ciudadano && ciudadano.emp_chk) {
             cargarEmpresaVinculada(ciudadano.id_ciudadano, false);
