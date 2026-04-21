@@ -11,6 +11,7 @@ venv/
 
 # Backend secrets
 backend/.env
+backend/.env.local
 
 # IDE
 .vscode/
@@ -36,3 +37,6 @@ deploy_to_supabase.py
 # Temp
 *.tmp
 *.log
+
+# Documentos archivados con info sensible (no versionar)
+docs/archivo/
