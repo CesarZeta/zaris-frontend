@@ -40,3 +40,6 @@ deploy_to_supabase.py
 
 # Documentos archivados con info sensible (no versionar)
 docs/archivo/
+
+# Config local de Claude Code (no versionar)
+.claude/
