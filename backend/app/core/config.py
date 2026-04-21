@@ -37,7 +37,9 @@ class Settings(BaseSettings):
         )
 
     class Config:
-        env_file = ".env"
+        # Permite seleccionar el archivo de entorno con la variable ENV_FILE
+        # (ej: ENV_FILE=.env.local para desarrollo local). Default: .env
+        env_file = os.getenv("ENV_FILE", ".env")
 
 
 settings = Settings()

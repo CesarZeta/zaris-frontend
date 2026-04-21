@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.routes.buc import router as buc_router
 from app.api.routes.agenda import router as agenda_router
+from app.init_db import create_tables
 
 # ── Logging ──────────────────────────────────────────────────────
 logging.basicConfig(
@@ -26,6 +27,7 @@ logger = logging.getLogger("zaris")
 async def lifespan(app: FastAPI):
     """Lifecycle hook: startup/shutdown."""
     logger.info(f"Iniciando {settings.PROJECT_NAME}")
+    await create_tables()
     yield
     logger.info("Cerrando aplicación")
 
