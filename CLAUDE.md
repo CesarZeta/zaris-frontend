@@ -48,7 +48,7 @@ acceso modular.
 - **Frontend:** Vanilla HTML/JS/CSS (sin frameworks)
 - **Backend:** FastAPI (Python 3.10+)
 - **Base de Datos:** PostgreSQL (Supabase en producción, Postgres 14 local en desarrollo)
-- **Deploy:** Railway (API) — el frontend actualmente corre solo en local
+- **Deploy:** Railway (API) + GitHub Pages (frontend)
 - **Tipografía:** Google Fonts — Inter + JetBrains Mono
 
 ## 5. Convenciones de Código
@@ -72,10 +72,11 @@ acceso modular.
 El proyecto ZARIS Gestión Estatal (ZGE) está organizado como **monorepo**. Todo el
 código (frontend, backend, SQL, documentación) vive en un único repositorio.
 
-- **Repositorio:** `github.com/CesarZeta/zaris-zge` (privado)
+- **Repositorio:** `github.com/CesarZeta/zaris-zge` (público)
+- `frontend/` — Vanilla HTML/JS/CSS (publicado en GitHub Pages)
 - **Estructura:**
   - `backend/` — FastAPI (deploy automático a Railway desde la rama `main`)
-  - `frontend/` — Vanilla HTML/JS/CSS (aún no deployado, corre en local)
+- **Frontend:** https://cesarzeta.github.io/zaris-zge/frontend/menu.html
   - `sql/` — Scripts de esquema y migraciones
   - `docs/` — Documentación técnica
 
