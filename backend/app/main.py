@@ -42,14 +42,14 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=[
+        "http://localhost:8080",
+        "https://cesarzeta.github.io",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    allow_origins=["http://localhost:8080",
-    "https://cesarzeta.github.io"],
 )
-
 # Rutas
 app.include_router(buc_router)
 app.include_router(agenda_router)
