@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZARIS — Gestión de Tablas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f1117;
+      --surface:  #1a1d27;
+      --surface2: #22263a;
+      --border:   #2e3350;
+      --accent:   #4f6ef7;
+      --accent-h: #3a57e8;
+      --danger:   #e05252;
+      --warning:  #f0a84e;
+      --success:  #4ecf8e;
+      --text:     #e4e6f0;
+      --text-dim: #7b82a8;
+      --mono:     'JetBrains Mono', monospace;
+      --sans:     'Inter', sans-serif;
+      --radius:   8px;
+    }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo { font-weight: 700; font-size: 1.1rem; color: var(--accent); letter-spacing: .5px; }
+    .logo span { color: var(--text-dim); font-weight: 400; font-size: .85rem; margin-left: .5rem; }
+    .header-right { display: flex; align-items: center; gap: 1rem; }
+    .btn-back {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: .35rem .9rem;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: .82rem;
+      font-family: var(--sans);
+      transition: border-color .2s, color .2s;
+    }
+    .btn-back:hover { border-color: var(--accent); color: var(--text); }
+
+    /* ── Layout ── */
+    .layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 220px;
+      min-width: 220px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 1.5rem 0;
+      overflow-y: auto;
+    }
+    .sidebar-title {
+      font-size: .7rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding: 0 1.2rem .75rem;
+    }
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      padding: .6rem 1.2rem;
+      cursor: pointer;
+      font-size: .85rem;
+      color: var(--text-dim);
+      border-left: 3px solid transparent;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+    .sidebar-item:hover { background: var(--surface2); color: var(--text); }
+    .sidebar-item.active { background: var(--surface2); color: var(--accent); border-left-color: var(--accent); }
+    .sidebar-item .icon { font-size: 1rem; width: 20px; text-align: center; }
+
+    /* ── Main content ── */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 2rem;
+    }
+
+    /* ── Welcome ── */
+    .welcome {
+      max-width: 700px;
+      margin: 3rem auto;
+      text-align: center;
+    }
+    .welcome h2 { font-size: 1.5rem; margin-bottom: .75rem; }
+    .welcome p { color: var(--text-dim); line-height: 1.6; }
+
+    /* ── Tabla header ── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+    .section-header h2 { font-size: 1.15rem; font-weight: 600; }
+    .btn-primary {
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      padding: .5rem 1.2rem;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: .85rem;
+      font-family: var(--sans);
+      font-weight: 500;
+      transition: background .2s;
+    }
+    .btn-primary:hover { background: var(--accent-h); }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      padding: .75rem 1.25rem;
+      border-radius: var(--radius);
+      font-size: .85rem;
+      font-weight: 500;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s;
+      z-index: 9999;
+    }
+    #toast.show { opacity: 1; }
+    #toast.ok  { background: var(--success); color: #0a1a10; }
+    #toast.err { background: var(--danger);  color: #fff; }
+
+    /* ── Data table ── */
+    .tbl-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: .83rem; }
+    thead th {
+      background: var(--surface2);
+      color: var(--text-dim);
+      font-weight: 600;
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      padding: .6rem 1rem;
+      text-align: left;
+      white-space: nowrap;
+    }
+    tbody tr { border-top: 1px solid var(--border); transition: background .1s; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td { padding: .6rem 1rem; color: var(--text); vertical-align: middle; }
+    tbody td.mono { font-family: var(--mono); font-size: .8rem; color: var(--text-dim); }
+    .badge {
+      display: inline-block;
+      padding: .15rem .55rem;
+      border-radius: 20px;
+      font-size: .72rem;
+      font-weight: 600;
+    }
+    .badge-on  { background: #1a3a2a; color: var(--success); }
+    .badge-off { background: #2a1a1a; color: var(--danger); }
+    .actions { display: flex; gap: .4rem; white-space: nowrap; }
+    .btn-edit, .btn-del {
+      border: none;
+      padding: .3rem .7rem;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: .78rem;
+      font-family: var(--sans);
+      font-weight: 500;
+      transition: opacity .2s;
+    }
+    .btn-edit { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-edit:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-del  { background: #2a1010; color: var(--danger); border: 1px solid #3d1515; }
+    .btn-del:hover { background: #3d1515; }
+
+    /* ── Empty ── */
+    .empty { text-align: center; padding: 3rem; color: var(--text-dim); font-size: .9rem; }
+
+    /* ── Spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading { text-align: center; padding: 2rem; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.6);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 500;
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 480px;
+      max-width: 95vw;
+      max-height: 85vh;
+      overflow-y: auto;
+      transform: translateY(16px);
+      transition: transform .2s;
+    }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-header h3 { font-size: 1rem; font-weight: 600; }
+    .btn-close {
+      background: none; border: none; color: var(--text-dim);
+      font-size: 1.2rem; cursor: pointer; line-height: 1;
+      padding: .2rem .4rem; border-radius: 4px;
+    }
+    .btn-close:hover { background: var(--surface2); color: var(--text); }
+    .modal-body { padding: 1.5rem; }
+    .modal-footer {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--border);
+      display: flex; justify-content: flex-end; gap: .75rem;
+    }
+    .btn-cancel {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: .5rem 1.1rem;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: .85rem;
+      font-family: var(--sans);
+    }
+    .btn-cancel:hover { border-color: var(--text-dim); color: var(--text); }
+
+    /* ── Form ── */
+    .field { margin-bottom: 1rem; }
+    .field label {
+      display: block;
+      font-size: .78rem;
+      font-weight: 500;
+      color: var(--text-dim);
+      margin-bottom: .3rem;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+    .field input, .field textarea, .field select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: .55rem .8rem;
+      border-radius: var(--radius);
+      font-size: .87rem;
+      font-family: var(--sans);
+      transition: border-color .2s;
+      outline: none;
+    }
+    .field input:focus, .field textarea:focus, .field select:focus {
+      border-color: var(--accent);
+    }
+    .field textarea { resize: vertical; min-height: 70px; }
+    .field select option { background: var(--surface); }
+    .field input[type="checkbox"] {
+      width: auto; margin-right: .4rem;
+    }
+    .field-check {
+      display: flex; align-items: center;
+      gap: .5rem; margin-bottom: 1rem;
+    }
+    .field-check label { margin: 0; font-size: .87rem; color: var(--text); text-transform: none; letter-spacing: 0; }
+
+    /* ── Confirm modal ── */
+    .confirm-msg { font-size: .9rem; color: var(--text); margin-bottom: .5rem; }
+    .confirm-warn { font-size: .82rem; color: var(--warning); }
+    .btn-danger {
+      background: var(--danger); border: none; color: #fff;
+      padding: .5rem 1.2rem; border-radius: var(--radius);
+      cursor: pointer; font-size: .85rem; font-family: var(--sans); font-weight: 500;
+    }
+    .btn-danger:hover { opacity: .85; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">ZARIS <span>/ Gestión de Tablas</span></div>
+  <div class="header-right">
+    <button class="btn-back" onclick="window.location.href='menu.html'">← Menú principal</button>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-title">Tablas</div>
+    <div class="sidebar-item" data-tabla="area"           onclick="selectTabla(this)"><span class="icon">🏢</span> Áreas</div>
+    <div class="sidebar-item" data-tabla="subarea"        onclick="selectTabla(this)"><span class="icon">📂</span> Subáreas</div>
+    <div class="sidebar-item" data-tabla="tipo_usuario"   onclick="selectTabla(this)"><span class="icon">🏷️</span> Tipos de Usuario</div>
+    <div class="sidebar-item" data-tabla="cargos"         onclick="selectTabla(this)"><span class="icon">🪪</span> Cargos</div>
+    <div class="sidebar-item" data-tabla="usuarios"       onclick="selectTabla(this)"><span class="icon">👤</span> Usuarios</div>
+    <div class="sidebar-item" data-tabla="agentes"        onclick="selectTabla(this)"><span class="icon">👥</span> Agentes</div>
+    <div class="sidebar-item" data-tabla="equipos"        onclick="selectTabla(this)"><span class="icon">⚙️</span> Equipos</div>
+    <div class="sidebar-item" data-tabla="equipo_usuarios" onclick="selectTabla(this)"><span class="icon">🔗</span> Equipo-Usuarios</div>
+    <div class="sidebar-item" data-tabla="servicios"      onclick="selectTabla(this)"><span class="icon">🌐</span> Servicios</div>
+    <div class="sidebar-item" data-tabla="tipo_reclamo"   onclick="selectTabla(this)"><span class="icon">📋</span> Tipos de Reclamo</div>
+  </nav>
+
+  <!-- Content -->
+  <main class="main" id="main">
+    <div class="welcome">
+      <h2>Panel de administración</h2>
+      <p>Seleccione una tabla del menú lateral para ver y gestionar sus registros.</p>
+    </div>
+  </main>
+
+</div>
+
+<!-- Modal formulario -->
+<div class="modal-overlay" id="formModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">Nuevo registro</h3>
+      <button class="btn-close" onclick="closeModal('formModal')">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('formModal')">Cancelar</button>
+      <button class="btn-primary" id="btnSave" onclick="guardarRegistro()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal confirmar baja -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Confirmar baja lógica</h3>
+      <button class="btn-close" onclick="closeModal('confirmModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="confirm-msg" id="confirmMsg">¿Dar de baja este registro?</p>
+      <p class="confirm-warn">El registro quedará inactivo. Esta acción se puede revertir editando el campo activo.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('confirmModal')">Cancelar</button>
+      <button class="btn-danger" id="btnConfirmDel" onclick="confirmarBaja()">Dar de baja</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+const API = 'http://127.0.0.1:8000/api/v1/admin';
+
+// ── Auth guard ────────────────────────────────────────────────────
+if (!localStorage.getItem('zaris_session')) {
+  window.location.href = 'home.html';
+}
+
+// ── Estado ────────────────────────────────────────────────────────
+let tablaActual = null;
+let editId      = null;
+let deleteId    = null;
+// Cache de opciones para selects FK
+const fkCache = {};
+
+// ── Esquemas de formulario por tabla ─────────────────────────────
+const SCHEMAS = {
+  area: {
+    label: 'Área',
+    pk: 'id_area',
+    cols: [
+      { field: 'nombre',      label: 'Nombre',      type: 'text',     required: true },
+      { field: 'descripcion', label: 'Descripción', type: 'textarea', required: false },
+    ],
+    display: ['id_area', 'nombre', 'descripcion'],
+  },
+  subarea: {
+    label: 'Subárea',
+    pk: 'id_subarea',
+    cols: [
+      { field: 'nombre',      label: 'Nombre',      type: 'text',     required: true },
+      { field: 'descripcion', label: 'Descripción', type: 'textarea', required: false },
+      { field: 'id_area',     label: 'Área',        type: 'select',   fk: 'area', fkLabel: 'nombre', fkPk: 'id_area', required: false },
+    ],
+    display: ['id_subarea', 'nombre', 'descripcion', 'id_area'],
+  },
+  tipo_usuario: {
+    label: 'Tipo de Usuario',
+    pk: 'id_tipo_usuario',
+    cols: [
+      { field: 'nombre',      label: 'Nombre',      type: 'text',     required: true },
+      { field: 'descripcion', label: 'Descripción', type: 'textarea', required: false },
+    ],
+    display: ['id_tipo_usuario', 'nombre', 'descripcion'],
+  },
+  cargos: {
+    label: 'Cargo',
+    pk: 'id_cargo',
+    cols: [
+      { field: 'nombre',      label: 'Nombre',      type: 'text',     required: true },
+      { field: 'descripcion', label: 'Descripción', type: 'textarea', required: false },
+    ],
+    display: ['id_cargo', 'nombre', 'descripcion'],
+  },
+  usuarios: {
+    label: 'Usuario',
+    pk: 'id_usuario',
+    cols: [
+      { field: 'nombre',         label: 'Nombre completo', type: 'text',     required: true },
+      { field: 'username',       label: 'Username',        type: 'text',     required: true },
+      { field: 'cuil',           label: 'CUIL',            type: 'text',     required: false },
+      { field: 'nivel_acceso',   label: 'Nivel de acceso', type: 'select',   options: [
+          {v:'1',l:'1 — Administrador'},{v:'2',l:'2 — Supervisor'},{v:'3',l:'3 — Operador'},{v:'4',l:'4 — Consultor'}
+        ], required: true },
+      { field: 'buc_acceso',     label: 'Acceso BUC',      type: 'checkbox', required: false },
+      { field: 'id_tipo_usuario',label: 'Tipo de usuario', type: 'select',   fk: 'tipo_usuario', fkLabel: 'nombre', fkPk: 'id_tipo_usuario', required: false },
+      { field: 'id_subarea',     label: 'Subárea',         type: 'select',   fk: 'subarea',      fkLabel: 'nombre', fkPk: 'id_subarea', required: false },
+    ],
+    display: ['id_usuario', 'nombre', 'username', 'cuil', 'nivel_acceso', 'buc_acceso'],
+  },
+  agentes: {
+    label: 'Agente',
+    pk: 'id_agente',
+    cols: [
+      { field: 'nombre',    label: 'Nombre',    type: 'text', required: true },
+      { field: 'apellido',  label: 'Apellido',  type: 'text', required: true },
+      { field: 'legajo',    label: 'Legajo',    type: 'text', required: false },
+      { field: 'email',     label: 'Email',     type: 'text', required: false },
+      { field: 'telefono',  label: 'Teléfono',  type: 'text', required: false },
+      { field: 'id_cargo',  label: 'Cargo',     type: 'select', fk: 'cargos',  fkLabel: 'nombre', fkPk: 'id_cargo',  required: false },
+      { field: 'id_subarea',label: 'Subárea',   type: 'select', fk: 'subarea', fkLabel: 'nombre', fkPk: 'id_subarea',required: false },
+    ],
+    display: ['id_agente', 'apellido', 'nombre', 'legajo', 'email', 'id_cargo', 'id_subarea'],
+  },
+  equipos: {
+    label: 'Equipo',
+    pk: 'id_equipo',
+    cols: [
+      { field: 'nombre',       label: 'Nombre',       type: 'text',     required: true },
+      { field: 'descripcion',  label: 'Descripción',  type: 'textarea', required: false },
+      { field: 'id_subarea',   label: 'Subárea',      type: 'select',   fk: 'subarea', fkLabel: 'nombre', fkPk: 'id_subarea', required: false },
+      { field: 'dias_semana',  label: 'Días (separados por coma)', type: 'text',  required: false },
+      { field: 'hora_inicio',  label: 'Hora inicio',  type: 'time',     required: false },
+      { field: 'hora_fin',     label: 'Hora fin',     type: 'time',     required: false },
+    ],
+    display: ['id_equipo', 'nombre', 'id_subarea', 'dias_semana', 'hora_inicio', 'hora_fin'],
+  },
+  equipo_usuarios: {
+    label: 'Miembro de Equipo',
+    pk: 'id_equipo_usuario',
+    cols: [
+      { field: 'id_equipo',  label: 'Equipo',   type: 'select', fk: 'equipos',  fkLabel: 'nombre', fkPk: 'id_equipo',  required: true },
+      { field: 'id_usuario', label: 'Usuario',  type: 'select', fk: 'usuarios', fkLabel: 'nombre', fkPk: 'id_usuario', required: true },
+      { field: 'rol',        label: 'Rol',      type: 'text',   required: false },
+    ],
+    display: ['id_equipo_usuario', 'id_equipo', 'id_usuario', 'rol'],
+  },
+  servicios: {
+    label: 'Servicio',
+    pk: 'id',
+    cols: [
+      { field: 'nombre',                 label: 'Nombre',               type: 'text',     required: true },
+      { field: 'descripcion',            label: 'Descripción',          type: 'textarea', required: false },
+      { field: 'capacidad_agentes',      label: 'Capacidad de agentes', type: 'number',   required: false },
+      { field: 'dias_semana',            label: 'Días (separados por coma)', type: 'text', required: false },
+      { field: 'hora_inicio',            label: 'Hora inicio',          type: 'time',     required: false },
+      { field: 'hora_fin',               label: 'Hora fin',             type: 'time',     required: false },
+      { field: 'id_usuario_responsable', label: 'Responsable',          type: 'select',   fk: 'usuarios', fkLabel: 'nombre', fkPk: 'id_usuario', required: false },
+    ],
+    display: ['id', 'nombre', 'descripcion', 'dias_semana', 'hora_inicio', 'hora_fin'],
+  },
+  tipo_reclamo: {
+    label: 'Tipo de Reclamo',
+    pk: 'id_tipo_reclamo',
+    cols: [
+      { field: 'nombre',      label: 'Nombre',      type: 'text',     required: true },
+      { field: 'descripcion', label: 'Descripción', type: 'textarea', required: false },
+      { field: 'id_subarea',  label: 'Subárea',     type: 'select',   fk: 'subarea', fkLabel: 'nombre', fkPk: 'id_subarea', required: false },
+    ],
+    display: ['id_tipo_reclamo', 'nombre', 'descripcion', 'id_subarea'],
+  },
+};
+
+// ── Toast ─────────────────────────────────────────────────────────
+function toast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.className = ''; }, 3000);
+}
+
+// ── Modal helpers ─────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── Selección de tabla ────────────────────────────────────────────
+async function selectTabla(el) {
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  tablaActual = el.dataset.tabla;
+  await cargarTabla();
+}
+
+// ── Cargar y renderizar tabla ─────────────────────────────────────
+async function cargarTabla() {
+  const schema = SCHEMAS[tablaActual];
+  const main = document.getElementById('main');
+
+  main.innerHTML = `
+    <div class="section-header">
+      <h2>${schema.label}s</h2>
+      <button class="btn-primary" onclick="abrirNuevo()">+ Nuevo</button>
+    </div>
+    <div class="loading"><span class="spinner"></span></div>
+  `;
+
+  try {
+    const res = await fetch(`${API}/${tablaActual}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const rows = await res.json();
+    renderTabla(rows, schema);
+  } catch (e) {
+    main.innerHTML += `<div class="empty">Error al cargar datos: ${e.message}</div>`;
+  }
+}
+
+function renderTabla(rows, schema) {
+  const main = document.getElementById('main');
+  const cols  = schema.display;
+  const headers = cols.map(c => `<th>${formatHeader(c)}</th>`).join('') + '<th>Acciones</th>';
+
+  const bodyRows = rows.length === 0
+    ? `<tr><td colspan="${cols.length + 1}" class="empty">Sin registros activos</td></tr>`
+    : rows.map(r => {
+        const cells = cols.map(c => `<td class="${isId(c) ? 'mono' : ''}">${formatCell(r[c], c)}</td>`).join('');
+        const pk = r[schema.pk];
+        return `<tr>
+          ${cells}
+          <td class="actions">
+            <button class="btn-edit" onclick="abrirEditar(${pk})">Editar</button>
+            <button class="btn-del"  onclick="abrirBaja(${pk}, '${r[Object.keys(r)[1]] || pk}')">Baja</button>
+          </td>
+        </tr>`;
+      }).join('');
+
+  main.innerHTML = `
+    <div class="section-header">
+      <h2>${schema.label}s <span style="font-size:.8rem;color:var(--text-dim);font-weight:400;">(${rows.length} activos)</span></h2>
+      <button class="btn-primary" onclick="abrirNuevo()">+ Nuevo</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>${headers}</tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>`;
+}
+
+function formatHeader(col) {
+  return col.replace(/^id_/, '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+function isId(col) { return col.startsWith('id_') || col === 'id'; }
+function formatCell(val, col) {
+  if (val === null || val === undefined) return '<span style="color:var(--text-dim)">—</span>';
+  if (typeof val === 'boolean') return val
+    ? '<span class="badge badge-on">Sí</span>'
+    : '<span class="badge badge-off">No</span>';
+  return String(val).replace(/</g, '&lt;');
+}
+
+// ── Cargar FK options ─────────────────────────────────────────────
+async function loadFkOptions(fk, fkPk, fkLabel) {
+  const key = fk;
+  if (fkCache[key]) return fkCache[key];
+  try {
+    const res = await fetch(`${API}/${fk}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    fkCache[key] = data.map(r => ({ value: r[fkPk], label: r[fkLabel] || r[fkPk] }));
+    return fkCache[key];
+  } catch { return []; }
+}
+
+// ── Construir formulario ──────────────────────────────────────────
+async function buildForm(schema, record = null) {
+  const body = document.getElementById('modalBody');
+  body.innerHTML = '<div class="loading"><span class="spinner"></span></div>';
+
+  // Precargar todos los FK
+  const fkPromises = schema.cols
+    .filter(c => c.type === 'select' && c.fk)
+    .map(c => loadFkOptions(c.fk, c.fkPk, c.fkLabel));
+  await Promise.all(fkPromises);
+
+  let html = '';
+  for (const col of schema.cols) {
+    const val = record ? (record[col.field] ?? '') : '';
+    const req  = col.required ? 'required' : '';
+
+    if (col.type === 'checkbox') {
+      const chk = val ? 'checked' : '';
+      html += `<div class="field-check">
+        <input type="checkbox" id="f_${col.field}" name="${col.field}" ${chk}>
+        <label for="f_${col.field}">${col.label}</label>
+      </div>`;
+    } else if (col.type === 'select' && col.fk) {
+      const opts = fkCache[col.fk] || [];
+      const options = `<option value="">— Sin asignar —</option>` +
+        opts.map(o => `<option value="${o.value}" ${String(val) === String(o.value) ? 'selected' : ''}>${o.label}</option>`).join('');
+      html += `<div class="field">
+        <label for="f_${col.field}">${col.label}</label>
+        <select id="f_${col.field}" name="${col.field}" ${req}>${options}</select>
+      </div>`;
+    } else if (col.type === 'select' && col.options) {
+      const options = col.options.map(o =>
+        `<option value="${o.v}" ${String(val) === String(o.v) ? 'selected' : ''}>${o.l}</option>`
+      ).join('');
+      html += `<div class="field">
+        <label for="f_${col.field}">${col.label}</label>
+        <select id="f_${col.field}" name="${col.field}" ${req}>${options}</select>
+      </div>`;
+    } else if (col.type === 'textarea') {
+      html += `<div class="field">
+        <label for="f_${col.field}">${col.label}</label>
+        <textarea id="f_${col.field}" name="${col.field}" ${req}>${val}</textarea>
+      </div>`;
+    } else {
+      const inputType = col.type === 'time' ? 'time' : col.type === 'number' ? 'number' : 'text';
+      html += `<div class="field">
+        <label for="f_${col.field}">${col.label}</label>
+        <input type="${inputType}" id="f_${col.field}" name="${col.field}" value="${val}" ${req}>
+      </div>`;
+    }
+  }
+
+  body.innerHTML = html;
+}
+
+// ── Abrir modal nuevo ─────────────────────────────────────────────
+async function abrirNuevo() {
+  editId = null;
+  const schema = SCHEMAS[tablaActual];
+  document.getElementById('modalTitle').textContent = `Nuevo ${schema.label}`;
+  await buildForm(schema);
+  openModal('formModal');
+}
+
+// ── Abrir modal editar ────────────────────────────────────────────
+async function abrirEditar(id) {
+  editId = id;
+  const schema = SCHEMAS[tablaActual];
+  document.getElementById('modalTitle').textContent = `Editar ${schema.label}`;
+
+  openModal('formModal');
+  document.getElementById('modalBody').innerHTML = '<div class="loading"><span class="spinner"></span></div>';
+
+  try {
+    const res = await fetch(`${API}/${tablaActual}/${id}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const record = await res.json();
+    await buildForm(schema, record);
+  } catch (e) {
+    closeModal('formModal');
+    toast(`Error al cargar registro: ${e.message}`, 'err');
+  }
+}
+
+// ── Leer datos del formulario ─────────────────────────────────────
+function readForm() {
+  const schema = SCHEMAS[tablaActual];
+  const data = {};
+  for (const col of schema.cols) {
+    const el = document.getElementById(`f_${col.field}`);
+    if (!el) continue;
+    if (col.type === 'checkbox') {
+      data[col.field] = el.checked;
+    } else {
+      const v = el.value.trim();
+      data[col.field] = v === '' ? null : v;
+    }
+  }
+  return data;
+}
+
+// ── Guardar (crear o editar) ──────────────────────────────────────
+async function guardarRegistro() {
+  const data = readForm();
+  const schema = SCHEMAS[tablaActual];
+
+  // Validar requeridos
+  for (const col of schema.cols) {
+    if (col.required && (data[col.field] === null || data[col.field] === '')) {
+      toast(`El campo "${col.label}" es obligatorio`, 'err');
+      return;
+    }
+  }
+
+  const btn = document.getElementById('btnSave');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+
+  try {
+    const url    = editId ? `${API}/${tablaActual}/${editId}` : `${API}/${tablaActual}`;
+    const method = editId ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    closeModal('formModal');
+    toast(editId ? 'Registro actualizado' : 'Registro creado', 'ok');
+    await cargarTabla();
+  } catch (e) {
+    toast(`Error: ${e.message}`, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Guardar';
+  }
+}
+
+// ── Abrir confirmar baja ──────────────────────────────────────────
+function abrirBaja(id, nombre) {
+  deleteId = id;
+  document.getElementById('confirmMsg').textContent =
+    `¿Dar de baja "${nombre}" (ID: ${id})?`;
+  openModal('confirmModal');
+}
+
+// ── Confirmar baja ────────────────────────────────────────────────
+async function confirmarBaja() {
+  if (!deleteId) return;
+  const btn = document.getElementById('btnConfirmDel');
+  btn.disabled = true;
+  btn.textContent = 'Procesando…';
+
+  try {
+    const res = await fetch(`${API}/${tablaActual}/${deleteId}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    closeModal('confirmModal');
+    toast('Registro dado de baja', 'ok');
+    delete fkCache[tablaActual]; // invalidar cache
+    await cargarTabla();
+  } catch (e) {
+    toast(`Error: ${e.message}`, 'err');
+  } finally {
+    deleteId = null;
+    btn.disabled = false;
+    btn.textContent = 'Dar de baja';
+  }
+}
+
+// ── Cerrar modales con Escape ─────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeModal('formModal');
+    closeModal('confirmModal');
+  }
+});
+// Cerrar clickando overlay
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+});
+</script>
+</body>
+</html>

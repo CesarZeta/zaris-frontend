@@ -108,3 +108,27 @@ desde Railway → Settings.
 > dice otra cosa, Railway usa el de Railway y el Procfile se ignora.
 > Si en el futuro se mueve `main.py` o se cambia la estructura, hay que actualizar el
 > comando en **Railway → Settings → Deploy → Custom Start Command**, no solo el Procfile.
+
+## 8. Campos Estándar Obligatorios por Tabla
+
+Toda tabla creada en ZARIS debe incluir los siguientes campos, en este orden al final de la definición de columnas:
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `activo` | `BOOLEAN DEFAULT TRUE` | Baja lógica — nunca DELETE físico |
+| `id_municipio` | `INTEGER` | FK futura a tabla `municipios` |
+| `fecha_alta` | `TIMESTAMPTZ DEFAULT NOW()` | Fecha de creación del registro |
+| `fecha_modificacion` | `TIMESTAMPTZ DEFAULT NOW()` | Última modificación — nunca llamar `fecha_actual` |
+| `id_subarea` | `INTEGER` | FK futura a tabla `subareas` |
+
+## 9. Estándar de Horario para Tablas con Servicio
+
+Toda tabla que defina horarios de atención o servicio debe incluir estos tres campos:
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `dias_semana` | `TEXT` | Días separados por coma: `"lunes,martes,miércoles,jueves,viernes"` |
+| `hora_inicio` | `TIME` | Hora de apertura del servicio — ej: `09:00` |
+| `hora_fin` | `TIME` | Hora de cierre del servicio — ej: `16:00` |
+
+Aplica a: `equipos`, `servicios`, y cualquier entidad futura con configuración horaria.
