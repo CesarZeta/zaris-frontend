@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.api.routes.auth import router as auth_router
 from app.api.routes.buc import router as buc_router
 from app.api.routes.agenda import router as agenda_router
 from app.api.routes.admin_tablas import router as admin_tablas_router
@@ -52,6 +53,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 # Rutas
+app.include_router(auth_router)
 app.include_router(buc_router)
 app.include_router(agenda_router)
 app.include_router(admin_tablas_router, prefix="/api/v1/admin")

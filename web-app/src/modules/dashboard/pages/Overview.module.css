@@ -1,0 +1,26 @@
+.page {
+  padding: 32px;
+  max-width: 1100px;
+}
+
+.header { margin-bottom: 24px; }
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--size-subhead);
+  font-weight: 400;
+  letter-spacing: var(--track-subhead);
+  color: var(--fg-1);
+}
+
+.subtitle {
+  font-size: var(--size-btn);
+  color: var(--fg-3);
+  margin-top: 4px;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}

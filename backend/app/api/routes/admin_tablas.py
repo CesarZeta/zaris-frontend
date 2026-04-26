@@ -9,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.auth import get_current_user
 
 router = APIRouter(tags=["Admin Tablas"])
 logger = logging.getLogger("zaris.admin_tablas")
@@ -98,7 +99,11 @@ def _row_to_dict(row: Any, exclude: list[str]) -> dict:
 # ─── GET /{tabla} — listar activos ────────────────────────────────────────────
 
 @router.get("/{tabla}")
-async def listar(tabla: str, db: AsyncSession = Depends(get_db)):
+async def listar(
+    tabla: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     cfg = _get_config(tabla)
     pk = cfg["pk"]
     exclude = cfg.get("exclude", [])
@@ -111,7 +116,12 @@ async def listar(tabla: str, db: AsyncSession = Depends(get_db)):
 # ─── GET /{tabla}/{id} — obtener uno ──────────────────────────────────────────
 
 @router.get("/{tabla}/{id}")
-async def obtener(tabla: str, id: int, db: AsyncSession = Depends(get_db)):
+async def obtener(
+    tabla: str,
+    id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     cfg = _get_config(tabla)
     pk = cfg["pk"]
     exclude = cfg.get("exclude", [])
@@ -126,7 +136,12 @@ async def obtener(tabla: str, id: int, db: AsyncSession = Depends(get_db)):
 # ─── POST /{tabla} — crear ────────────────────────────────────────────────────
 
 @router.post("/{tabla}", status_code=201)
-async def crear(tabla: str, body: dict, db: AsyncSession = Depends(get_db)):
+async def crear(
+    tabla: str,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     cfg = _get_config(tabla)
     allowed = cfg["cols"]
     exclude = cfg.get("exclude", [])
@@ -134,6 +149,8 @@ async def crear(tabla: str, body: dict, db: AsyncSession = Depends(get_db)):
     data = {k: v for k, v in body.items() if k in allowed}
     if not data:
         raise HTTPException(status_code=422, detail="No se recibieron campos válidos")
+
+    data["id_usuario_alta"] = current_user["id_usuario"]
 
     cols = ", ".join(data.keys())
     vals = ", ".join(f":{k}" for k in data.keys())
@@ -152,7 +169,13 @@ async def crear(tabla: str, body: dict, db: AsyncSession = Depends(get_db)):
 # ─── PUT /{tabla}/{id} — editar ───────────────────────────────────────────────
 
 @router.put("/{tabla}/{id}")
-async def editar(tabla: str, id: int, body: dict, db: AsyncSession = Depends(get_db)):
+async def editar(
+    tabla: str,
+    id: int,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     cfg = _get_config(tabla)
     pk = cfg["pk"]
     allowed = cfg["cols"]
@@ -163,6 +186,7 @@ async def editar(tabla: str, id: int, body: dict, db: AsyncSession = Depends(get
     if not data:
         raise HTTPException(status_code=422, detail="No se recibieron campos válidos")
 
+    data["id_usuario_modificacion"] = current_user["id_usuario"]
     sets = ", ".join(f"{k} = :{k}" for k in data.keys())
     stmt = text(
         f"UPDATE {tabla} SET {sets}, {fecha_mod} = NOW() "
@@ -186,16 +210,22 @@ async def editar(tabla: str, id: int, body: dict, db: AsyncSession = Depends(get
 # ─── DELETE /{tabla}/{id} — baja lógica ───────────────────────────────────────
 
 @router.delete("/{tabla}/{id}")
-async def baja_logica(tabla: str, id: int, db: AsyncSession = Depends(get_db)):
+async def baja_logica(
+    tabla: str,
+    id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
     cfg = _get_config(tabla)
     pk = cfg["pk"]
     fecha_mod = cfg["fecha_mod"]
     stmt = text(
-        f"UPDATE {tabla} SET activo = FALSE, {fecha_mod} = NOW() "
+        f"UPDATE {tabla} SET activo = FALSE, {fecha_mod} = NOW(), "
+        f"id_usuario_modificacion = :uid "
         f"WHERE {pk} = :id RETURNING {pk}"
     )
     try:
-        result = await db.execute(stmt, {"id": id})
+        result = await db.execute(stmt, {"id": id, "uid": current_user["id_usuario"]})
         await db.commit()
         row = result.fetchone()
         if not row:

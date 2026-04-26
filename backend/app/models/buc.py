@@ -20,6 +20,7 @@ class Usuario(Base):
     nombre        = Column(String(150), nullable=False)
     nivel_acceso  = Column(Integer, nullable=False, default=3)
     username      = Column(String(50), nullable=False, unique=True)
+    email         = Column(String(150), nullable=True)
     password_hash = Column(String(255), nullable=False)
     id_cargo      = Column(String(100))
     id_municipio  = Column(Integer, nullable=False, default=377)
